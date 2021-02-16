@@ -22,6 +22,12 @@ jobs:
           version: latest
           use-tool-cache: true
 
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: wasm-bindgen-cli
+          version: latest
+          use-tool-cache: true
+
       - name: trunk build
         run: trunk build
 
