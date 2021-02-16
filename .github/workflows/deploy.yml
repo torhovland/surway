@@ -19,9 +19,10 @@ jobs:
         with:
           crate: trunk
           version: latest
+          use-tool-cache: true
 
       - name: trunk build
-        run: target/debug/trunk build
+        run: trunk build
 
       - name: Deploy to GitHub Pages
         if: success()
