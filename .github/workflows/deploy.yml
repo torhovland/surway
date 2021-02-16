@@ -14,13 +14,11 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: install --locked trunk
 
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/install@v0.1
         with:
-          command: install --locked trunk      
+          crate: trunk
+          version: latest
 
       - name: trunk build
         run: target/debug/trunk build
