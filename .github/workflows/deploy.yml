@@ -5,31 +5,12 @@ on: push
 jobs:
   deploy:
     name: Deploy
-    runs-on: ubuntu-latest
+    runs-on: torhovland/rust-trunk:0.8.2
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          target: wasm32-unknown-unknown
-          toolchain: stable
-          override: true
-
-      - uses: actions-rs/install@v0.1
-        with:
-          crate: trunk
-          version: latest
-          use-tool-cache: true
-
-      - uses: actions-rs/install@v0.1
-        with:
-          crate: wasm-bindgen-cli
-          version: latest
-          use-tool-cache: true
-
-      - name: trunk build
-        run: trunk build
+      - run: trunk build
 
       - name: Deploy to GitHub Pages
         if: success()
