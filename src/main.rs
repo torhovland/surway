@@ -14,22 +14,16 @@ enum Msg {
     Increment,
 }
 
-fn init(_: Url, _: &mut impl Orders<Msg>) -> Model {
-    let mut options = web_sys::MutationObserverInit::new();
-    options.child_list(true);
-
-    let targetNode = document().get_element_by_id("app").expect("Could not get app node.");
-    let init_map_function = Closure::wrap(Box::new(|| init_map()) as Box<dyn Fn()>);
-    let observer = web_sys::MutationObserver::new(&init_map_function.as_ref().unchecked_ref())
-        .expect("Could not create MutationObserver");
-        
-    observer.observe_with_options(&targetNode, &options);    
-    init_map_function.forget();
+fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
+    // Cannot initialize Leaflet until the map element has rendered.
+    orders.after_next_render(init_map);
 
     Model::default()
 }
 
-fn init_map() {
+fn init_map(_: RenderInfo) {
+    web_sys::console::log_1(&"init_map".into());
+
     let map_config = MapConfig { center: [63.5, 10.09], zoom: 5.0 };
     let js_map_config = JsValue::from_serde(&map_config).unwrap();
     let layer = leaflet::TileLayer::new("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", &JsValue::NULL);
