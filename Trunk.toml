@@ -1,6 +1,5 @@
 [build]
 release = true
-public_url = "./"
 
 [serve]
 port = 8088
