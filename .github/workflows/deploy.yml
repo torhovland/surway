@@ -1,17 +1,35 @@
-name: Deploy Surway
-
 on: push
 
 jobs:
   deploy:
-    name: Deploy
     runs-on: ubuntu-latest
-    container: torhovland/rust-trunk:0.8.2
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - run: trunk build
+      - name: Install Rust tools
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: default
+          target: wasm32-unknown-unknown
+          toolchain: stable
+
+      - name: Install Trunk
+        uses: actions-rs/install@v0.1
+        with:
+          crate: trunk
+          version: latest
+          use-tool-cache: true
+
+      - name: Install wasm-bindgen-cli (needed by Trunk)
+        uses: actions-rs/install@v0.1
+        with:
+          crate: wasm-bindgen-cli
+          version: latest
+          use-tool-cache: true
+
+      - name: Build
+        run: trunk build
 
       - name: Deploy to GitHub Pages
         if: success()
