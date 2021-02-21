@@ -1,4 +1,5 @@
-use log::{Level, info};
+use cfg_if::cfg_if;
+use log::info;
 use seed::{prelude::*, *};
 
 mod map;
@@ -60,7 +61,18 @@ fn view(model: &Model) -> Node<Msg> {
     ]
 }
 
+cfg_if! {
+    if #[cfg(debug_assertions)] {
+        fn init_log() {
+            use log::Level;
+            console_log::init_with_level(Level::Trace).expect("error initializing log");
+        }
+    } else {
+        fn init_log() {}
+    }
+}
+
 fn main() {
-    console_log::init_with_level(Level::Debug);
+    init_log();
     App::start("app", init, update, view);
 }

@@ -5,6 +5,7 @@ authors = ["Tor Hovland <tor.hovland@bekk.no>"]
 edition = "2018"
 
 [dependencies]
+cfg-if = "0.1"
 console_log = { version = "0.2", features = ["color"] }
 leaflet = { git = "https://github.com/torhovland/leaflet-rs" }
 log = "0.4"
