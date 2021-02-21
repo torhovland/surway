@@ -1,4 +1,4 @@
-use leaflet::{Circle, LatLng, LatLngBounds, Map, Polygon, Polyline, Rectangle, TileLayer};
+use leaflet::{LatLng, Map, Polyline, TileLayer};
 use seed::{prelude::*};
 use serde::{Serialize, Deserialize};
 
@@ -22,19 +22,5 @@ pub fn init(_: RenderInfo) {
         [LatLng::new(63.25, 11.25), LatLng::new(63.75, 11.75), LatLng::new(63.5, 12.0)]
             .iter().map(JsValue::from).collect(),
         &JsValue::from_serde(&PolylineOptions { color: "red".into() }).expect("Unable to serialize polyline options")
-    ).addTo(&map);
-
-    Polygon::new(
-        [LatLng::new(63.25, 12.25), LatLng::new(63.75, 12.75), LatLng::new(63.5, 13.0)]
-            .iter().map(JsValue::from).collect()
-    ).addTo(&map);
-
-    Rectangle::new(&LatLngBounds::new(&LatLng::new(63.25, 10.25), &LatLng::new(63.75, 10.75))).addTo(&map);
-
-    Circle::new(&LatLng::new(63.25, 13.25)).addTo(&map);
-
-    Circle::new_with_options(
-        &LatLng::new(63.25, 13.35), 
-        &JsValue::from_serde(&CircleOptions { radius: 4000.0 }).expect("Unable to serialize circle options")
     ).addTo(&map);
 }
