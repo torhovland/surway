@@ -381,6 +381,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "quick-xml"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0452695941410a58c8ce4391707ba9bad26a247173bd9886a05a5e8a8babec75"
+dependencies = [
+ "memchr",
+ "serde",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -602,6 +612,7 @@ name = "surway"
 version = "0.1.0"
 dependencies = [
  "leaflet",
+ "quick-xml",
  "seed",
  "serde",
  "wasm-bindgen",

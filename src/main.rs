@@ -1,47 +1,54 @@
 use seed::{prelude::*, *};
-use serde::{Serialize, Deserialize};
 
-#[derive(Serialize, Deserialize)]
-pub struct MapConfig {
-    pub center: [f32; 2],
-    pub zoom: f32,
-}
+mod map;
+mod osm;
+
+#[macro_use]
+mod util;
 
 type Model = i32;
 
-#[derive(Copy, Clone)]
 enum Msg {
     Increment,
+    Fetched(fetch::Result<String>),
 }
 
 fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
     // Cannot initialize Leaflet until the map element has rendered.
-    orders.after_next_render(init_map);
+    orders.after_next_render(map::init);
+
+    orders.skip().perform_cmd({
+        async { Msg::Fetched(send_message().await) }
+    });
 
     Model::default()
 }
 
-fn init_map(_: RenderInfo) {
-    web_sys::console::log_1(&"init_map".into());
-
-    let map_config = MapConfig { center: [63.5, 10.09], zoom: 5.0 };
-    let js_map_config = JsValue::from_serde(&map_config).expect("Unable to serialize map config");
-    let layer = leaflet::TileLayer::new("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", &JsValue::NULL);
-    let map = leaflet::Map::new("map", &js_map_config);
-    layer.addTo(&map);
+fn get_request_url() -> &'static str {
+    "https://www.openstreetmap.org/api/0.6/map?bbox=10.29072%2C63.39981%2C10.29426%2C63.40265"
 }
 
-fn window() -> web_sys::Window {
-    web_sys::window().expect("Could not get browser window.")
-}
-
-fn document() -> web_sys::Document {
-    window().document().expect("Could not get browser document.")
+async fn send_message() -> fetch::Result<String> {
+    fetch(get_request_url())
+        .await?
+        .check_status()?
+        .text()
+        .await
 }
 
 fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
     match msg {
         Msg::Increment => *model += 1,
+
+        Msg::Fetched(Ok(response_data)) => {
+            console_log!("{}", response_data);
+            let osm: osm::OsmDocument = quick_xml::de::from_str(&response_data).expect("Unable to deserialize the OSM data");
+            console_log!("{:#?}", osm);
+        }
+
+        Msg::Fetched(Err(fetch_error)) => {
+            console_log!("Fetching OSM data failed: {:#?}", fetch_error);
+        }
     }
 }
 

@@ -5,8 +5,9 @@ authors = ["Tor Hovland <tor.hovland@bekk.no>"]
 edition = "2018"
 
 [dependencies]
-leaflet = "0.1.0"
-seed = "0.8.0"
+leaflet = "0.1"
+quick-xml = { version = "0.21", features = ["serialize"] }
+seed = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 web-sys = { version = "0.3", features = ["console", "MutationObserver", "MutationObserverInit", "Node"] }
