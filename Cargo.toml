@@ -5,7 +5,9 @@ authors = ["Tor Hovland <tor.hovland@bekk.no>"]
 edition = "2018"
 
 [dependencies]
+console_log = { version = "0.2", features = ["color"] }
 leaflet = { git = "https://github.com/torhovland/leaflet-rs" }
+log = "0.4"
 quick-xml = { version = "0.21", features = ["serialize"] }
 seed = "0.8"
 serde = { version = "1.0", features = ["derive"] }

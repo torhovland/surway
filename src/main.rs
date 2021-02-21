@@ -1,11 +1,9 @@
+use log::{Level, info};
 use seed::{prelude::*, *};
 
 mod map;
 mod osm;
 mod topology;
-
-#[macro_use]
-mod util;
 
 type Model = i32;
 
@@ -42,14 +40,14 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
         Msg::Increment => *model += 1,
 
         Msg::Fetched(Ok(response_data)) => {
-            console_log!("{}", response_data);
+            info!("{}", response_data);
             let osm: osm::OsmDocument = quick_xml::de::from_str(&response_data).expect("Unable to deserialize the OSM data");
             let topology: topology::Topology = osm.into(); 
-            console_log!("{:?}", topology);
+            info!("{:?}", topology);
         }
 
         Msg::Fetched(Err(fetch_error)) => {
-            console_log!("Fetching OSM data failed: {:#?}", fetch_error);
+            error!("Fetching OSM data failed: {:#?}", fetch_error);
         }
     }
 }
@@ -63,5 +61,6 @@ fn view(model: &Model) -> Node<Msg> {
 }
 
 fn main() {
+    console_log::init_with_level(Level::Debug);
     App::start("app", init, update, view);
 }

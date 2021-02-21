@@ -1,3 +1,4 @@
+use log::info;
 use leaflet::{LatLng, Map, Polyline, TileLayer};
 use seed::{prelude::*};
 use serde::{Serialize, Deserialize};
@@ -17,6 +18,8 @@ pub fn init(_: RenderInfo) {
     map.setView(&LatLng::new(63.5, 10.5), 5.0);
 
     TileLayer::new("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", &JsValue::NULL).addTo(&map);
+
+    info!("Map initialized.");
 
     Polyline::new_with_options(
         [LatLng::new(63.25, 11.25), LatLng::new(63.75, 11.75), LatLng::new(63.5, 12.0)]
