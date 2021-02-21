@@ -17,9 +17,9 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
     // Cannot initialize Leaflet until the map element has rendered.
     orders.after_next_render(map::init);
 
-    orders.skip().perform_cmd({
-        async { Msg::Fetched(send_message().await) }
-    });
+    orders
+        .skip()
+        .perform_cmd(async { Msg::Fetched(send_message().await) });
 
     Model::default()
 }
@@ -29,11 +29,7 @@ fn get_request_url() -> &'static str {
 }
 
 async fn send_message() -> fetch::Result<String> {
-    fetch(get_request_url())
-        .await?
-        .check_status()?
-        .text()
-        .await
+    fetch(get_request_url()).await?.check_status()?.text().await
 }
 
 fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
@@ -42,8 +38,10 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
 
         Msg::Fetched(Ok(response_data)) => {
             info!("{}", response_data);
-            let osm: osm::OsmDocument = quick_xml::de::from_str(&response_data).expect("Unable to deserialize the OSM data");
-            let topology: topology::Topology = osm.into(); 
+            let osm: osm::OsmDocument = quick_xml::de::from_str(&response_data)
+                .expect("Unable to deserialize the OSM data");
+
+            let topology: topology::Topology = osm.into();
             info!("{:?}", topology);
         }
 
