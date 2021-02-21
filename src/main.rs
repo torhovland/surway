@@ -2,6 +2,7 @@ use seed::{prelude::*, *};
 
 mod map;
 mod osm;
+mod topology;
 
 #[macro_use]
 mod util;
@@ -43,7 +44,8 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
         Msg::Fetched(Ok(response_data)) => {
             console_log!("{}", response_data);
             let osm: osm::OsmDocument = quick_xml::de::from_str(&response_data).expect("Unable to deserialize the OSM data");
-            console_log!("{:#?}", osm);
+            let topology: topology::Topology = osm.into(); 
+            console_log!("{:?}", topology);
         }
 
         Msg::Fetched(Err(fetch_error)) => {

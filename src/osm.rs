@@ -3,34 +3,34 @@ use serde::{Deserialize};
 #[derive(Debug, Deserialize)]
 pub struct OsmDocument {
     #[serde(rename = "node", default)]
-    nodes: Vec<OsmNode>,
+    pub nodes: Vec<OsmNode>,
     #[serde(rename = "way", default)]
-    ways: Vec<OsmWay>,
+    pub ways: Vec<OsmWay>,
 }
 
 #[derive(Debug, Deserialize)]
-struct OsmNode {
-    id: String,
-    lat: f32,
-    lon: f32,
+pub struct OsmNode {
+    pub id: String,
+    pub lat: f32,
+    pub lon: f32,
 }
 
 #[derive(Debug, Deserialize)]
-struct OsmWay {
+pub struct OsmWay {
     #[serde(rename = "nd", default)]
-    nodes: Vec<Nd>,
+    pub nodes: Vec<OsmNd>,
     #[serde(rename = "tag", default)]
-    tags: Vec<Tag>,
+    pub tags: Vec<OsmTag>,
 }
 
 #[derive(Debug, Deserialize)]
-struct Nd {
+pub struct OsmNd {
     #[serde(rename = "ref", default)]
-    refs: String,
+    pub node_ref: String,
 }
 
 #[derive(Debug, Deserialize)]
-struct Tag {
-    k: String,
-    v: String,
+pub struct OsmTag {
+    pub k: String,
+    pub v: String,
 }
