@@ -1,5 +1,5 @@
 [build]
-release = true
+release = false
 
 [serve]
 port = 8088

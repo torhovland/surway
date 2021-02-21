@@ -8,7 +8,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - run: trunk build
+      - name: Build
+        run: trunk --config Trunk-release.toml build
 
       - name: Deploy to GitHub Pages
         if: success()
