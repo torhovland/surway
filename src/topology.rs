@@ -1,24 +1,26 @@
+use leaflet::LatLng;
+
 use crate::osm::{OsmDocument, OsmNd, OsmNode, OsmTag, OsmWay};
 
 #[derive(Debug)]
 pub struct Topology {
-    ways: Vec<Way>,
+    pub ways: Vec<Way>,
 }
 
 #[derive(Debug)]
-struct Way {
-    points: Vec<Point>,
-    tags: Vec<Tag>,
+pub struct Way {
+    pub points: Vec<Point>,
+    pub tags: Vec<Tag>,
 }
 
 #[derive(Debug)]
-struct Point {
+pub struct Point {
     lat: f32,
     lon: f32,
 }
 
 #[derive(Debug)]
-struct Tag {
+pub struct Tag {
     name: String,
     value: String,
 }
@@ -69,5 +71,9 @@ impl Point {
             lat: node.lat,
             lon: node.lon,
         }
+    }
+
+    pub fn to_lat_lng(self: &Point) -> LatLng {
+        LatLng::new(self.lat.into(), self.lon.into())
     }
 }

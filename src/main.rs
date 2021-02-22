@@ -1,4 +1,5 @@
 use cfg_if::cfg_if;
+use leaflet::Map;
 use log::info;
 use seed::{prelude::*, *};
 
@@ -6,22 +7,27 @@ mod map;
 mod osm;
 mod topology;
 
-type Model = i32;
+pub struct Model {
+    map: Option<Map>,
+}
 
 enum Msg {
-    Increment,
+    SetMap(Map),
     Fetched(fetch::Result<String>),
 }
 
 fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
     // Cannot initialize Leaflet until the map element has rendered.
-    orders.after_next_render(map::init);
+    orders.after_next_render(|_| {
+        let map_view = map::init();
+        Msg::SetMap(map_view)
+    });
 
     orders
         .skip()
         .perform_cmd(async { Msg::Fetched(send_message().await) });
 
-    Model::default()
+    Model { map: None }
 }
 
 fn get_request_url() -> &'static str {
@@ -34,7 +40,9 @@ async fn send_message() -> fetch::Result<String> {
 
 fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
     match msg {
-        Msg::Increment => *model += 1,
+        Msg::SetMap(map) => {
+            model.map = Some(map);
+        }
 
         Msg::Fetched(Ok(response_data)) => {
             info!("{}", response_data);
@@ -42,6 +50,9 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
                 .expect("Unable to deserialize the OSM data");
 
             let topology: topology::Topology = osm.into();
+
+            map::render_topology(&topology, &model);
+
             info!("{:?}", topology);
         }
 
@@ -51,12 +62,8 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
     }
 }
 
-fn view(model: &Model) -> Node<Msg> {
-    div![
-        div![id!["map"]],
-        "This is a counter: ",
-        button![model, ev(Ev::Click, |_| Msg::Increment),],
-    ]
+fn view(_: &Model) -> Node<Msg> {
+    div![div![id!["map"]],]
 }
 
 cfg_if! {

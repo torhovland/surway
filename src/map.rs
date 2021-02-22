@@ -1,3 +1,7 @@
+use crate::{
+    topology::{Point, Topology},
+    Model,
+};
 use leaflet::{LatLng, Map, Polyline, TileLayer};
 use log::info;
 use seed::prelude::*;
@@ -13,7 +17,7 @@ struct PolylineOptions {
     color: String,
 }
 
-pub fn init(_: RenderInfo) {
+pub fn init() -> Map {
     let map = Map::new("map", &JsValue::NULL);
     map.setView(&LatLng::new(63.5, 10.5), 5.0);
 
@@ -25,19 +29,27 @@ pub fn init(_: RenderInfo) {
 
     info!("Map initialized.");
 
-    Polyline::new_with_options(
-        [
-            LatLng::new(63.25, 11.25),
-            LatLng::new(63.75, 11.75),
-            LatLng::new(63.5, 12.0),
-        ]
-        .iter()
-        .map(JsValue::from)
-        .collect(),
-        &JsValue::from_serde(&PolylineOptions {
-            color: "red".into(),
-        })
-        .expect("Unable to serialize polyline options"),
-    )
-    .addTo(&map);
+    map
+}
+
+pub fn render_topology(topology: &Topology, model: &Model) {
+    match &model.map {
+        None => {}
+        Some(map) => {
+            for way in topology.ways.iter() {
+                Polyline::new_with_options(
+                    way.points
+                        .iter()
+                        .map(Point::to_lat_lng)
+                        .map(JsValue::from)
+                        .collect(),
+                    &JsValue::from_serde(&PolylineOptions {
+                        color: "red".into(),
+                    })
+                    .expect("Unable to serialize polyline options"),
+                )
+                .addTo(&map);
+            }
+        }
+    }
 }
