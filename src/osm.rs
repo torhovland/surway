@@ -1,4 +1,3 @@
-use leaflet::LatLng;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -51,11 +50,5 @@ impl OsmWay {
             .iter()
             .map(|nd| osm.get_node(&nd.node_ref))
             .collect()
-    }
-}
-
-impl OsmNode {
-    pub fn to_lat_lng(&self) -> LatLng {
-        LatLng::new(self.lat.into(), self.lon.into())
     }
 }

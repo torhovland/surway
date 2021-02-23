@@ -1,6 +1,5 @@
 use cfg_if::cfg_if;
 use leaflet::Map;
-use log::info;
 use osm::OsmDocument;
 use seed::{prelude::*, *};
 
@@ -14,7 +13,7 @@ pub struct Model {
 
 enum Msg {
     SetMap(Map),
-    Fetched(fetch::Result<String>),
+    OsmFetched(fetch::Result<String>),
 }
 
 fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
@@ -26,7 +25,7 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
 
     orders
         .skip()
-        .perform_cmd(async { Msg::Fetched(send_message().await) });
+        .perform_cmd(async { Msg::OsmFetched(send_osm_request().await) });
 
     Model {
         map: None,
@@ -34,30 +33,33 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
     }
 }
 
-fn get_request_url() -> &'static str {
+fn get_osm_request_url() -> &'static str {
     "https://www.openstreetmap.org/api/0.6/map?bbox=10.29072%2C63.39981%2C10.29426%2C63.40265"
 }
 
-async fn send_message() -> fetch::Result<String> {
-    fetch(get_request_url()).await?.check_status()?.text().await
+async fn send_osm_request() -> fetch::Result<String> {
+    fetch(get_osm_request_url())
+        .await?
+        .check_status()?
+        .text()
+        .await
 }
 
 fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
     match msg {
         Msg::SetMap(map) => {
             model.map = Some(map);
-        }
-
-        Msg::Fetched(Ok(response_data)) => {
-            info!("{}", response_data);
-            let osm: osm::OsmDocument = quick_xml::de::from_str(&response_data)
-                .expect("Unable to deserialize the OSM data");
-            model.osm = Some(osm);
-
             map::render_topology(&model);
         }
 
-        Msg::Fetched(Err(fetch_error)) => {
+        Msg::OsmFetched(Ok(response_data)) => {
+            let osm: osm::OsmDocument = quick_xml::de::from_str(&response_data)
+                .expect("Unable to deserialize the OSM data");
+            model.osm = Some(osm);
+            map::render_topology(&model);
+        }
+
+        Msg::OsmFetched(Err(fetch_error)) => {
             error!("Fetching OSM data failed: {:#?}", fetch_error);
         }
     }

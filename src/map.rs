@@ -1,13 +1,7 @@
 use crate::{osm::OsmNode, Model};
 use leaflet::{LatLng, Map, Polyline, TileLayer};
-use log::info;
 use seed::prelude::*;
 use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize)]
-struct CircleOptions {
-    radius: f32,
-}
 
 #[derive(Serialize, Deserialize)]
 struct PolylineOptions {
@@ -24,8 +18,6 @@ pub fn init() -> Map {
         &JsValue::NULL,
     )
     .addTo(&map);
-
-    info!("Map initialized.");
 
     map
 }
@@ -47,5 +39,11 @@ pub fn render_topology(model: &Model) {
             )
             .addTo(&map);
         }
+    }
+}
+
+impl OsmNode {
+    pub fn to_lat_lng(&self) -> LatLng {
+        LatLng::new(self.lat.into(), self.lon.into())
     }
 }
