@@ -1,14 +1,15 @@
 use cfg_if::cfg_if;
 use leaflet::Map;
 use log::info;
+use osm::OsmDocument;
 use seed::{prelude::*, *};
 
 mod map;
 mod osm;
-mod topology;
 
 pub struct Model {
     map: Option<Map>,
+    osm: Option<OsmDocument>,
 }
 
 enum Msg {
@@ -27,7 +28,10 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
         .skip()
         .perform_cmd(async { Msg::Fetched(send_message().await) });
 
-    Model { map: None }
+    Model {
+        map: None,
+        osm: None,
+    }
 }
 
 fn get_request_url() -> &'static str {
@@ -48,12 +52,9 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
             info!("{}", response_data);
             let osm: osm::OsmDocument = quick_xml::de::from_str(&response_data)
                 .expect("Unable to deserialize the OSM data");
+            model.osm = Some(osm);
 
-            let topology: topology::Topology = osm.into();
-
-            map::render_topology(&topology, &model);
-
-            info!("{:?}", topology);
+            map::render_topology(&model);
         }
 
         Msg::Fetched(Err(fetch_error)) => {

@@ -1,7 +1,4 @@
-use crate::{
-    topology::{Point, Topology},
-    Model,
-};
+use crate::{osm::OsmNode, Model};
 use leaflet::{LatLng, Map, Polyline, TileLayer};
 use log::info;
 use seed::prelude::*;
@@ -33,25 +30,22 @@ pub fn init() -> Map {
     map
 }
 
-pub fn render_topology(topology: &Topology, model: &Model) {
-    match &model.map {
-        None => {}
-        Some(map) => {
-            for way in topology.ways.iter() {
-                Polyline::new_with_options(
-                    way.points
-                        .iter()
-                        .map(Point::to_lat_lng)
-                        .map(JsValue::from)
-                        .collect(),
-                    &JsValue::from_serde(&PolylineOptions {
-                        color: "blue".into(),
-                        weight: 2,
-                    })
-                    .expect("Unable to serialize polyline options"),
-                )
-                .addTo(&map);
-            }
+pub fn render_topology(model: &Model) {
+    if let (Some(map), Some(osm)) = (&model.map, &model.osm) {
+        for way in osm.ways.iter() {
+            Polyline::new_with_options(
+                way.get_points(&osm)
+                    .iter()
+                    .map(|&node| OsmNode::to_lat_lng(node))
+                    .map(JsValue::from)
+                    .collect(),
+                &JsValue::from_serde(&PolylineOptions {
+                    color: "blue".into(),
+                    weight: 2,
+                })
+                .expect("Unable to serialize polyline options"),
+            )
+            .addTo(&map);
         }
     }
 }
