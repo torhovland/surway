@@ -15,11 +15,12 @@ struct CircleOptions {
 #[derive(Serialize, Deserialize)]
 struct PolylineOptions {
     color: String,
+    weight: u32,
 }
 
 pub fn init() -> Map {
     let map = Map::new("map", &JsValue::NULL);
-    map.setView(&LatLng::new(63.5, 10.5), 5.0);
+    map.setView(&LatLng::new(63.401, 10.295), 17.0);
 
     TileLayer::new(
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -44,7 +45,8 @@ pub fn render_topology(topology: &Topology, model: &Model) {
                         .map(JsValue::from)
                         .collect(),
                     &JsValue::from_serde(&PolylineOptions {
-                        color: "red".into(),
+                        color: "blue".into(),
+                        weight: 2,
                     })
                     .expect("Unable to serialize polyline options"),
                 )

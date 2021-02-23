@@ -1,3 +1,7 @@
+img.leaflet-tile {
+    filter: saturate(25%);
+}
+
 #map {
-    height: 400px;
+    height: 75vh;
 }
