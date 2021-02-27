@@ -44,7 +44,7 @@ impl OsmDocument {
         }
     }
 
-    fn get_node(&self, id: &str) -> &OsmNode {
+    fn node(&self, id: &str) -> &OsmNode {
         self.nodes
             .iter()
             .find(|node| node.id == id)
@@ -53,10 +53,7 @@ impl OsmDocument {
 }
 
 impl OsmWay {
-    pub fn get_points<'a>(&self, osm: &'a OsmDocument) -> Vec<&'a OsmNode> {
-        self.nds
-            .iter()
-            .map(|nd| osm.get_node(&nd.node_ref))
-            .collect()
+    pub fn points<'a>(&'a self, osm: &'a OsmDocument) -> impl Iterator<Item = &OsmNode> {
+        self.nds.iter().map(move |nd| osm.node(&nd.node_ref))
     }
 }

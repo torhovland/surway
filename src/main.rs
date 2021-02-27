@@ -53,9 +53,9 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
         }
 
         Msg::OsmFetched(Ok(response_data)) => {
-            let osm: OsmDocument = quick_xml::de::from_str(&response_data)
+            model.osm = quick_xml::de::from_str(&response_data)
                 .expect("Unable to deserialize the OSM data");
-            model.osm = osm;
+
             map::render_topology(&model);
         }
 

@@ -26,9 +26,8 @@ pub fn render_topology(model: &Model) {
     if let Some(map) = &model.map {
         for way in model.osm.ways.iter() {
             Polyline::new_with_options(
-                way.get_points(&model.osm)
-                    .iter()
-                    .map(|&node| LatLng::from(node))
+                way.points(&model.osm)
+                    .map(LatLng::from)
                     .map(JsValue::from)
                     .collect(),
                 &JsValue::from_serde(&PolylineOptions {
