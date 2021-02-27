@@ -9,11 +9,9 @@ cfg-if = "1.0.0"
 console_log = { version = "0.2.0", features = ["color"] }
 leaflet = "0.1.2"
 log = "0.4.14"
-quick-xml = { version = "0.20.0", features = ["serialize"] } # 0.21 breaks Trunk debug build.
+quick-xml = { version = "0.22.0", features = ["serialize"] }
 seed = "0.8.0"
-serde = { version = "1.0.123", features = ["derive"] }
-wasm-bindgen = { version = "0.2.70", features = ["serde-serialize"] }
-web-sys = { version = "0.3.47", features = ["console", "MutationObserver", "MutationObserverInit", "Node"] }
+serde = "1.0.123"
 
 [profile.release]
 lto = true
