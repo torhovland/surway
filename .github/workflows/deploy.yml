@@ -3,7 +3,7 @@ on: push
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    container: torhovland/rust-trunk:0.8.2
+    container: torhovland/rust-trunk:0.8.2.1
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
