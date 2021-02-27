@@ -28,7 +28,7 @@ pub fn render_topology(model: &Model) {
             Polyline::new_with_options(
                 way.get_points(&osm)
                     .iter()
-                    .map(|&node| OsmNode::to_lat_lng(node))
+                    .map(|&node| LatLng::from(node))
                     .map(JsValue::from)
                     .collect(),
                 &JsValue::from_serde(&PolylineOptions {
@@ -42,8 +42,8 @@ pub fn render_topology(model: &Model) {
     }
 }
 
-impl OsmNode {
-    pub fn to_lat_lng(&self) -> LatLng {
-        LatLng::new(self.lat.into(), self.lon.into())
+impl From<&OsmNode> for LatLng {
+    fn from(node: &OsmNode) -> Self {
+        LatLng::new(node.lat, node.lon)
     }
 }

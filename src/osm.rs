@@ -11,8 +11,8 @@ pub struct OsmDocument {
 #[derive(Debug, Deserialize)]
 pub struct OsmNode {
     pub id: String,
-    pub lat: f32,
-    pub lon: f32,
+    pub lat: f64,
+    pub lon: f64,
 }
 
 #[derive(Debug, Deserialize)]
