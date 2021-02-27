@@ -17,6 +17,7 @@ pub struct OsmNode {
 
 #[derive(Debug, Deserialize)]
 pub struct OsmWay {
+    pub id: String,
     #[serde(rename = "nd", default)]
     pub nds: Vec<OsmNd>,
     #[serde(rename = "tag", default)]
@@ -36,6 +37,13 @@ pub struct OsmTag {
 }
 
 impl OsmDocument {
+    pub fn new() -> OsmDocument {
+        OsmDocument {
+            nodes: vec![],
+            ways: vec![],
+        }
+    }
+
     fn get_node(&self, id: &str) -> &OsmNode {
         self.nodes
             .iter()

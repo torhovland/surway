@@ -1,6 +1,6 @@
 use cfg_if::cfg_if;
 use leaflet::Map;
-use osm::OsmDocument;
+use osm::{OsmDocument, OsmWay};
 use seed::{prelude::*, *};
 
 mod map;
@@ -8,7 +8,7 @@ mod osm;
 
 pub struct Model {
     map: Option<Map>,
-    osm: Option<OsmDocument>,
+    osm: OsmDocument,
 }
 
 enum Msg {
@@ -29,7 +29,7 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
 
     Model {
         map: None,
-        osm: None,
+        osm: OsmDocument::new(),
     }
 }
 
@@ -53,9 +53,9 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
         }
 
         Msg::OsmFetched(Ok(response_data)) => {
-            let osm: osm::OsmDocument = quick_xml::de::from_str(&response_data)
+            let osm: OsmDocument = quick_xml::de::from_str(&response_data)
                 .expect("Unable to deserialize the OSM data");
-            model.osm = Some(osm);
+            model.osm = osm;
             map::render_topology(&model);
         }
 
@@ -65,8 +65,18 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
     }
 }
 
-fn view(_: &Model) -> Node<Msg> {
-    div![div![id!["map"]],]
+fn view(model: &Model) -> Node<Msg> {
+    div![div![id!["map"]], div![model.osm.ways.iter().map(view_way)],]
+}
+
+fn view_way(way: &OsmWay) -> Node<Msg> {
+    div![
+        h2![&way.id],
+        ul![way
+            .tags
+            .iter()
+            .map(|tag| li![format!("{} = {}", tag.k, tag.v)])]
+    ]
 }
 
 cfg_if! {
