@@ -1,5 +1,6 @@
-use crate::{osm::OsmNode, Model};
-use leaflet::{LatLng, Map, Polyline, TileLayer};
+use crate::{geo::Coord, osm::OsmNode, Model};
+use leaflet::{Circle, LatLng, Map, Polyline, TileLayer};
+use log::debug;
 use seed::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +12,6 @@ struct PolylineOptions {
 
 pub fn init() -> Map {
     let map = Map::new("map", &JsValue::NULL);
-    map.setView(&LatLng::new(63.401, 10.295), 17.0);
 
     TileLayer::new(
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -20,6 +20,12 @@ pub fn init() -> Map {
     .addTo(&map);
 
     map
+}
+
+pub fn set_view(model: &Model) {
+    if let (Some(map), Some(position)) = (&model.map, &model.position) {
+        map.setView(&position.into(), 17.0);
+    }
 }
 
 pub fn render_topology(model: &Model) {
@@ -31,13 +37,60 @@ pub fn render_topology(model: &Model) {
                     .map(JsValue::from)
                     .collect(),
                 &JsValue::from_serde(&PolylineOptions {
-                    color: "blue".into(),
+                    color: "green".into(),
                     weight: 2,
                 })
                 .expect("Unable to serialize polyline options"),
             )
             .addTo(&map);
         }
+
+        for along_track in model.along_tracks.iter() {
+            let (a, b) = along_track;
+            Polyline::new_with_options(
+                vec![a, b]
+                    .into_iter()
+                    .map(LatLng::from)
+                    .map(JsValue::from)
+                    .collect(),
+                &JsValue::from_serde(&PolylineOptions {
+                    color: "orange".into(),
+                    weight: 1,
+                })
+                .expect("Unable to serialize polyline options"),
+            )
+            .addTo(&map);
+        }
+
+        if let Some(pos) = &model.position {
+            for destination in model.nearest_points.iter() {
+                Polyline::new_with_options(
+                    vec![pos, destination]
+                        .into_iter()
+                        .map(LatLng::from)
+                        .map(JsValue::from)
+                        .collect(),
+                    &JsValue::from_serde(&PolylineOptions {
+                        color: "red".into(),
+                        weight: 1,
+                    })
+                    .expect("Unable to serialize polyline options"),
+                )
+                .addTo(&map);
+            }
+        }
+    }
+}
+
+pub fn render_position(model: &Model) {
+    if let (Some(map), Some(position)) = (&model.map, &model.position) {
+        Circle::new(&LatLng::from(position)).addTo(&map);
+    }
+}
+
+impl From<&Coord> for LatLng {
+    fn from(coord: &Coord) -> Self {
+        LatLng::new(coord.lat, coord.lon)
     }
 }
 
