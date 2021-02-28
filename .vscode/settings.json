@@ -5,4 +5,8 @@
         "editor.defaultFormatter": "matklad.rust-analyzer"
     },
     "rust-analyzer.checkOnSave.command": "clippy",
+    "rust-analyzer.checkOnSave.extraArgs": [
+        "--target-dir",
+        "/tmp/rust-analyzer-check"
+    ]
 }
