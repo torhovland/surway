@@ -1,6 +1,5 @@
 use crate::{geo::Coord, osm::OsmNode, Model};
 use leaflet::{Circle, LatLng, Map, Polyline, TileLayer};
-use log::debug;
 use seed::prelude::*;
 use serde::{Deserialize, Serialize};
 

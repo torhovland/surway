@@ -8,74 +8,93 @@ pub struct Coord {
     pub lon: f64,
 }
 
-pub fn bearing(a: &Coord, b: &Coord) -> f64 {
-    let pa = a.lat.to_radians();
-    let pb = b.lat.to_radians();
-    let la = a.lon.to_radians();
-    let lb = b.lon.to_radians();
-    let y = (lb - la).sin() * pb.cos();
-    let x = pa.cos() * pb.sin() - pa.sin() * pb.cos() * (lb - la).cos();
-    let t = y.atan2(x);
-    (t.to_degrees() + 360.0) % 360.0
-}
+// Formulas from https://www.movable-type.co.uk/scripts/latlong.html
 
-pub fn distance_points(a: &Coord, b: &Coord) -> f64 {
-    let ta = a.lat.to_radians();
-    let tb = b.lat.to_radians();
-    let dt = (a.lat - b.lat).to_radians();
-    let dl = (a.lon - b.lon).to_radians();
-    let a = (dt / 2.0).sin().powi(2) + ta.cos() * tb.cos() * (dl / 2.0).sin().powi(2);
+pub fn distance(c1: &Coord, c2: &Coord) -> f64 {
+    // Haversine formula
+    let phi1 = c1.phi();
+    let phi2 = c2.phi();
+    let lambda1 = c1.lambda();
+    let lambda2 = c2.lambda();
+    let delta_phi = phi2 - phi1;
+    let delta_lambda = lambda2 - lambda1;
+    let a = (delta_phi / 2.0).sin().powi(2)
+        + phi1.cos() * phi2.cos() * (delta_lambda / 2.0).sin().powi(2);
     let c = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
     R * c
 }
 
-fn distance_line_point(line_a: &Coord, line_b: &Coord, c: &Coord) -> f64 {
-    let d_ac = distance_points(line_a, c);
-    let angular_d_ac = d_ac / R;
-    let t_ac = bearing(line_a, c).to_radians();
-    let t_ab = bearing(line_a, line_b).to_radians();
-    R * (angular_d_ac.sin() * (t_ac - t_ab).sin()).asin()
+pub fn bearing(c1: &Coord, c2: &Coord) -> f64 {
+    let phi1 = c1.phi();
+    let phi2 = c2.phi();
+    let lambda1 = c1.lambda();
+    let lambda2 = c2.lambda();
+    let delta_lambda = lambda2 - lambda1;
+    let y = delta_lambda.sin() * phi2.cos();
+    let x = phi1.cos() * phi2.sin() - phi1.sin() * phi2.cos() * delta_lambda.cos();
+    let theta = y.atan2(x);
+    (theta.to_degrees() + 360.0) % 360.0
 }
 
-fn along_track_distance(line_a: &Coord, line_b: &Coord, c: &Coord) -> f64 {
-    let d_ac = distance_points(line_a, c);
-    let angular_d_ac = d_ac / R;
-    R * (angular_d_ac.cos() / (distance_line_point(line_a, line_b, c) / R).cos()).acos()
+pub fn destination(c1: &Coord, bearing: f64, distance: f64) -> Coord {
+    let phi1 = c1.phi();
+    let lambda1 = c1.lambda();
+    let brng = bearing.to_radians();
+    let phi2 =
+        (phi1.sin() * (distance / R).cos() + phi1.cos() * (distance / R).sin() * brng.cos()).asin();
+    let lambda2 = lambda1
+        + (brng.sin() * (distance / R).sin() * phi1.cos())
+            .atan2((distance / R).cos() - phi1.sin() * phi2.sin());
+
+    Coord {
+        lat: phi2.to_degrees(),
+        lon: ((lambda2 + 540.0) % 360.0 - 180.0).to_degrees(),
+    }
 }
 
-pub fn along_track_distance2(line_a: &Coord, line_b: &Coord, c: &Coord) -> f64 {
-    let d_ac = distance_points(line_a, c);
-    let angular_d_ac = d_ac / R;
-    let b = bearing(line_a, c).to_radians();
-    let e = bearing(line_a, line_b).to_radians();
-    let x = (angular_d_ac.sin() * (b - e).sin()).asin();
-    let b2 = e - b;
-    let cx = x.cos();
+fn cross_track_distance(c1: &Coord, c2: &Coord, c3: &Coord) -> f64 {
+    let d13 = distance(c1, c3);
+    let d_13_angular = d13 / R;
+    let theta13 = bearing(c1, c3).to_radians();
+    let theta12 = bearing(c1, c2).to_radians();
+    let delta_theta = theta13 - theta12;
+    let x = (d_13_angular.sin() * delta_theta.sin()).asin();
+    R * x
+}
 
-    if cx.abs() > f64::EPSILON {
-        R * (angular_d_ac.cos() / cx).acos().copysign(b2.cos())
+pub fn along_track_distance(c1: &Coord, c2: &Coord, c3: &Coord) -> f64 {
+    // A version with negative sign if we end up before the start point (c1)
+    // https://github.com/mrJean1/PyGeodesy/blob/master/pygeodesy/sphericalTrigonometry.py
+
+    let d13 = distance(c1, c3);
+    let d_13_angular = d13 / R;
+    let theta13 = bearing(c1, c3).to_radians();
+    let theta12 = bearing(c1, c2).to_radians();
+    let delta_theta = theta13 - theta12;
+    let x = (d_13_angular.sin() * delta_theta.sin()).asin();
+
+    if x.cos().abs() > f64::EPSILON {
+        R * (d_13_angular.cos() / x.cos())
+            .acos()
+            .copysign(delta_theta.cos())
     } else {
         0.0
     }
 }
 
-pub fn destination(start: &Coord, bearing: f64, d: f64) -> Coord {
-    let p1 = start.lat.to_radians();
-    let l1 = start.lon.to_radians();
-    let brng = bearing.to_radians();
-    let p2 = (p1.sin() * (d / R).cos() + p1.cos() * (d / R).sin() * brng.cos()).asin();
-    let l2 =
-        l1 + (brng.sin() * (d / R).sin() * p1.cos()).atan2((d / R).cos() - p1.sin() * p2.sin());
-    Coord {
-        lat: p2.to_degrees(),
-        lon: l2.to_degrees(),
-        //lon: ((l2 + 540.0) % 360.0 - 180.0).to_degrees(),
+impl Coord {
+    fn phi(self: &Coord) -> f64 {
+        self.lat.to_radians()
+    }
+
+    fn lambda(self: &Coord) -> f64 {
+        self.lon.to_radians()
     }
 }
 
 impl OsmNode {
     fn distance(self: &OsmNode, coord: &Coord) -> f64 {
-        distance_points(&self.into(), coord)
+        distance(&self.into(), coord)
     }
 }
 
@@ -103,43 +122,39 @@ mod tests {
 
     use assert_approx_eq::assert_approx_eq;
 
-    const Bergen: Coord = Coord {
+    const BERGEN: Coord = Coord {
         lat: 60.390321,
         lon: 5.328394,
     };
 
-    const Trondheim: Coord = Coord {
+    const TRONDHEIM: Coord = Coord {
         lat: 63.387661,
         lon: 10.434604,
     };
 
-    const Forde: Coord = Coord {
+    const FORDE: Coord = Coord {
         lat: 61.452202,
         lon: 5.857147,
     };
 
     #[test]
     fn test_distance_points() {
-        let bergen = Bergen;
-        let trondheim = Trondheim;
-        assert_approx_eq!(
-            distance_points(&bergen, &trondheim),
-            427117.53826249886,
-            0.1
-        );
+        let bergen = BERGEN;
+        let trondheim = TRONDHEIM;
+        assert_approx_eq!(distance(&bergen, &trondheim), 427117.53826249886, 0.1);
     }
 
     #[test]
     fn test_bearing() {
-        let bergen = Bergen;
-        let trondheim = Trondheim;
+        let bergen = BERGEN;
+        let trondheim = TRONDHEIM;
         assert_approx_eq!(bearing(&bergen, &trondheim), 36.52253184347995, 0.1);
     }
 
     #[test]
     fn test_destination() {
-        let bergen = Bergen;
-        let trondheim = Trondheim;
+        let bergen = BERGEN;
+        let trondheim = TRONDHEIM;
         let e = destination(&bergen, 36.52253184347995, 427117.53826249886);
         assert_approx_eq!(e.lat, trondheim.lat, 0.0000001);
         assert_approx_eq!(e.lon, trondheim.lon, 0.0000001);
@@ -158,11 +173,11 @@ mod tests {
 
     #[test]
     fn test_distance_line_point() {
-        let bergen = Bergen;
-        let trondheim = Trondheim;
-        let forde = Forde;
+        let bergen = BERGEN;
+        let trondheim = TRONDHEIM;
+        let forde = FORDE;
         assert_approx_eq!(
-            distance_line_point(&bergen, &trondheim, &forde),
+            cross_track_distance(&bergen, &trondheim, &forde),
             -47755.6,
             0.1
         );
@@ -170,9 +185,9 @@ mod tests {
 
     #[test]
     fn test_along_track_distance() {
-        let bergen = Bergen;
-        let trondheim = Trondheim;
-        let forde = Forde;
+        let bergen = BERGEN;
+        let trondheim = TRONDHEIM;
+        let forde = FORDE;
         assert_approx_eq!(
             along_track_distance(&bergen, &trondheim, &forde),
             111704.2,
@@ -195,7 +210,7 @@ mod tests {
             lat: 53.2611,
             lon: -0.7972,
         };
-        assert_approx_eq!(distance_line_point(&s, &e, &p), -307.6, 0.1);
+        assert_approx_eq!(cross_track_distance(&s, &e, &p), -307.6, 0.1);
     }
 
     #[test]
@@ -217,7 +232,7 @@ mod tests {
             lat: 53.35423,
             lon: -1.60881,
         };
-        assert_approx_eq!(along_track_distance2(&s, &e, &p2), 7587.6, 0.1);
-        assert_approx_eq!(along_track_distance2(&s, &e, &p1), -7702.7, 0.1);
+        assert_approx_eq!(along_track_distance(&s, &e, &p2), 7587.6, 0.1);
+        assert_approx_eq!(along_track_distance(&s, &e, &p1), -7702.7, 0.1);
     }
 }

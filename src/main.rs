@@ -78,9 +78,9 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
                         if i < nodes.iter().count() - 1 {
                             let line2 = nodes[i + 1];
 
-                            let length = geo::distance_points(&line1.into(), &line2.into());
+                            let length = geo::distance(&line1.into(), &line2.into());
                             let along_track_distance =
-                                geo::along_track_distance2(&line1.into(), &line2.into(), &pos);
+                                geo::along_track_distance(&line1.into(), &line2.into(), &pos);
 
                             let bearing = geo::bearing(&line1.into(), &line2.into());
 
@@ -92,15 +92,15 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
                                 geo::destination(&line1.into(), bearing, along_track_distance)
                             };
 
-                            let distance = geo::distance_points(pos, &destination);
+                            let distance = geo::distance(pos, &destination);
 
                             nearest_points.push((distance, destination));
                         }
                     }
 
-                    let (nearest_distance, nearest_point) = nearest_points
+                    let (_, nearest_point) = nearest_points
                         .iter()
-                        .min_by(|(x, cx), (y, cy)| {
+                        .min_by(|(x, _), (y, _)| {
                             x.partial_cmp(y).expect("Could not compare distances")
                         })
                         .expect("Could not find a nearest distance");
