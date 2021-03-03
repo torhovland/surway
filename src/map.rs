@@ -9,6 +9,11 @@ struct PolylineOptions {
     weight: u32,
 }
 
+#[derive(Serialize, Deserialize)]
+struct CircleOptions {
+    radius: f64,
+}
+
 pub fn init() -> Map {
     let map = Map::new("map", &JsValue::NULL);
 
@@ -36,7 +41,12 @@ pub fn render_topology(model: &Model) {
                     .map(JsValue::from)
                     .collect(),
                 &JsValue::from_serde(&PolylineOptions {
-                    color: "green".into(),
+                    color: if model.nearest_way().id == way.id {
+                        "blue"
+                    } else {
+                        "green"
+                    }
+                    .into(),
                     weight: 2,
                 })
                 .expect("Unable to serialize polyline options"),
@@ -44,25 +54,8 @@ pub fn render_topology(model: &Model) {
             .addTo(&map);
         }
 
-        for along_track in model.along_tracks.iter() {
-            let (a, b) = along_track;
-            Polyline::new_with_options(
-                vec![a, b]
-                    .into_iter()
-                    .map(LatLng::from)
-                    .map(JsValue::from)
-                    .collect(),
-                &JsValue::from_serde(&PolylineOptions {
-                    color: "orange".into(),
-                    weight: 1,
-                })
-                .expect("Unable to serialize polyline options"),
-            )
-            .addTo(&map);
-        }
-
         if let Some(pos) = &model.position {
-            for destination in model.nearest_points.iter() {
+            for (_, destination, _) in model.nearest_points().iter() {
                 Polyline::new_with_options(
                     vec![pos, destination]
                         .into_iter()
@@ -83,7 +76,12 @@ pub fn render_topology(model: &Model) {
 
 pub fn render_position(model: &Model) {
     if let (Some(map), Some(position)) = (&model.map, &model.position) {
-        Circle::new(&LatLng::from(position)).addTo(&map);
+        Circle::new_with_options(
+            &LatLng::from(position),
+            &JsValue::from_serde(&CircleOptions { radius: 3.5 })
+                .expect("Unable to serialize circle options"),
+        )
+        .addTo(&map);
     }
 }
 

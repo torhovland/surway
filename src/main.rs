@@ -12,8 +12,6 @@ pub struct Model {
     map: Option<Map>,
     osm: OsmDocument,
     position: Option<Coord>,
-    nearest_points: Vec<Coord>,
-    along_tracks: Vec<(Coord, Coord)>,
 }
 
 enum Msg {
@@ -36,11 +34,9 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
         map: None,
         osm: OsmDocument::new(),
         position: Some(Coord {
-            lat: 63.4,
-            lon: 10.292,
+            lat: 63.4015,
+            lon: 10.2935,
         }),
-        nearest_points: vec![],
-        along_tracks: vec![],
     }
 }
 
@@ -68,46 +64,6 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
         Msg::OsmFetched(Ok(response_data)) => {
             model.osm = quick_xml::de::from_str(&response_data)
                 .expect("Unable to deserialize the OSM data");
-
-            if let Some(pos) = &model.position {
-                for way in model.osm.ways.iter() {
-                    let nodes: Vec<&OsmNode> = way.points(&model.osm).collect();
-                    let mut nearest_points = vec![];
-
-                    for (i, &line1) in nodes.iter().enumerate() {
-                        if i < nodes.iter().count() - 1 {
-                            let line2 = nodes[i + 1];
-
-                            let length = geo::distance(&line1.into(), &line2.into());
-                            let along_track_distance =
-                                geo::along_track_distance(&line1.into(), &line2.into(), &pos);
-
-                            let bearing = geo::bearing(&line1.into(), &line2.into());
-
-                            let destination = if along_track_distance < 0.0 {
-                                line1.into()
-                            } else if along_track_distance > length {
-                                line2.into()
-                            } else {
-                                geo::destination(&line1.into(), bearing, along_track_distance)
-                            };
-
-                            let distance = geo::distance(pos, &destination);
-
-                            nearest_points.push((distance, destination));
-                        }
-                    }
-
-                    let (_, nearest_point) = nearest_points
-                        .iter()
-                        .min_by(|(x, _), (y, _)| {
-                            x.partial_cmp(y).expect("Could not compare distances")
-                        })
-                        .expect("Could not find a nearest distance");
-
-                    model.nearest_points.push(nearest_point.clone());
-                }
-            }
 
             map::render_topology(&model);
         }
@@ -157,4 +113,64 @@ cfg_if! {
 fn main() {
     init_log();
     App::start("app", init, update, view);
+}
+
+impl Model {
+    fn nearest_points(&self) -> Vec<(f64, Coord, &OsmWay)> {
+        let mut nearest_points = vec![];
+
+        if let Some(pos) = &self.position {
+            for way in self.osm.ways.iter() {
+                let nodes: Vec<&OsmNode> = way.points(&self.osm).collect();
+                let mut node_distances = vec![];
+
+                for (i, &line1) in nodes.iter().enumerate() {
+                    if i < nodes.iter().count() - 1 {
+                        let line2 = nodes[i + 1];
+
+                        let length = geo::distance(&line1.into(), &line2.into());
+                        let along_track_distance =
+                            geo::along_track_distance(&line1.into(), &line2.into(), &pos);
+
+                        let bearing = geo::bearing(&line1.into(), &line2.into());
+
+                        let destination = if along_track_distance < 0.0 {
+                            line1.into()
+                        } else if along_track_distance > length {
+                            line2.into()
+                        } else {
+                            geo::destination(&line1.into(), bearing, along_track_distance)
+                        };
+
+                        let distance = geo::distance(pos, &destination);
+
+                        node_distances.push((distance, destination, way));
+                    }
+                }
+
+                let nearest_point = node_distances
+                    .into_iter()
+                    .min_by(|(x, _, _), (y, _, _)| {
+                        x.partial_cmp(y).expect("Could not compare distances")
+                    })
+                    .expect("Could not find a nearest distance");
+
+                nearest_points.push(nearest_point);
+            }
+        }
+
+        nearest_points
+    }
+
+    fn nearest_way(&self) -> &OsmWay {
+        let nearest_points = self.nearest_points();
+
+        let nearest_point = nearest_points
+            .iter()
+            .min_by(|(x, _, _), (y, _, _)| x.partial_cmp(y).expect("Could not compare distances"))
+            .expect("Could not find a nearest distance");
+
+        let (_, _, way) = nearest_point;
+        way
+    }
 }

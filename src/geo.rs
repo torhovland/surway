@@ -52,7 +52,7 @@ pub fn destination(c1: &Coord, bearing: f64, distance: f64) -> Coord {
     }
 }
 
-fn cross_track_distance(c1: &Coord, c2: &Coord, c3: &Coord) -> f64 {
+pub fn cross_track_distance(c1: &Coord, c2: &Coord, c3: &Coord) -> f64 {
     let d13 = distance(c1, c3);
     let d_13_angular = d13 / R;
     let theta13 = bearing(c1, c3).to_radians();
