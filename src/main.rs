@@ -127,26 +127,11 @@ impl Model {
                     let nodes: Vec<&OsmNode> = way.points(&self.osm).collect();
                     let mut node_distances = vec![];
 
-                    for (i, &line1) in nodes.iter().enumerate() {
+                    for (i, &a) in nodes.iter().enumerate() {
                         if i < nodes.iter().count() - 1 {
-                            let line2 = nodes[i + 1];
-
-                            let length = geo::distance(&line1.into(), &line2.into());
-                            let along_track_distance =
-                                geo::along_track_distance(&line1.into(), &line2.into(), &pos);
-
-                            let bearing = geo::bearing(&line1.into(), &line2.into());
-
-                            let destination = if along_track_distance < 0.0 {
-                                line1.into()
-                            } else if along_track_distance > length {
-                                line2.into()
-                            } else {
-                                geo::destination(&line1.into(), bearing, along_track_distance)
-                            };
-
+                            let b = nodes[i + 1];
+                            let destination = geo::nearest_point(a.into(), b.into(), pos.clone());
                             let distance = geo::distance(pos, &destination);
-
                             node_distances.push((distance, destination, way));
                         }
                     }

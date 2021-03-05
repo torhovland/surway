@@ -82,6 +82,20 @@ pub fn along_track_distance(c1: &Coord, c2: &Coord, c3: &Coord) -> f64 {
     }
 }
 
+pub fn nearest_point(c1: Coord, c2: Coord, c3: Coord) -> Coord {
+    let length = distance(&c1, &c2);
+    let along_track_distance = along_track_distance(&c1, &c2, &c3);
+    let bearing = bearing(&c1, &c2);
+
+    if along_track_distance < 0.0 {
+        c1
+    } else if along_track_distance > length {
+        c2
+    } else {
+        destination(&c1, bearing, along_track_distance)
+    }
+}
+
 impl Coord {
     fn phi(self: &Coord) -> f64 {
         self.lat.to_radians()
