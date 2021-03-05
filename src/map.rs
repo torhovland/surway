@@ -37,6 +37,7 @@ pub fn render_topology(model: &Model) {
         for way in model.osm.ways.iter() {
             Polyline::new_with_options(
                 way.points(&model.osm)
+                    .into_iter()
                     .map(LatLng::from)
                     .map(JsValue::from)
                     .collect(),
@@ -55,7 +56,7 @@ pub fn render_topology(model: &Model) {
         }
 
         if let Some(pos) = &model.position {
-            for (_, destination, _) in model.nearest_points().iter() {
+            for (destination, _, _) in model.nearest_point_on_each_way().iter() {
                 Polyline::new_with_options(
                     vec![pos, destination]
                         .into_iter()

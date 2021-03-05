@@ -53,7 +53,10 @@ impl OsmDocument {
 }
 
 impl OsmWay {
-    pub fn points<'a>(&'a self, osm: &'a OsmDocument) -> impl Iterator<Item = &OsmNode> {
-        self.nds.iter().map(move |nd| osm.node(&nd.node_ref))
+    pub fn points<'a>(&'a self, osm: &'a OsmDocument) -> Vec<&OsmNode> {
+        self.nds
+            .iter()
+            .map(move |nd| osm.node(&nd.node_ref))
+            .collect()
     }
 }

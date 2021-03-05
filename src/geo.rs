@@ -115,6 +115,7 @@ impl OsmNode {
 impl OsmWay {
     pub fn distance(self: &OsmWay, coord: &Coord, osm: &OsmDocument) -> f64 {
         self.points(osm)
+            .iter()
             .map(|point| point.distance(coord))
             .min_by(|a, b| a.partial_cmp(b).expect("Tried to compare a NaN"))
             .unwrap_or(f64::INFINITY) // In case of a way with no points

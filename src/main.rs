@@ -1,7 +1,7 @@
 use cfg_if::cfg_if;
 use geo::Coord;
 use leaflet::Map;
-use osm::{OsmDocument, OsmNode, OsmWay};
+use osm::{OsmDocument, OsmWay};
 use seed::{prelude::*, *};
 
 mod geo;
@@ -116,7 +116,7 @@ fn main() {
 }
 
 impl Model {
-    fn nearest_points(&self) -> Vec<(f64, Coord, &OsmWay)> {
+    fn nearest_point_on_each_way(&self) -> Vec<(Coord, f64, &OsmWay)> {
         match &self.position {
             None => vec![],
             Some(pos) => self
@@ -124,21 +124,16 @@ impl Model {
                 .ways
                 .iter()
                 .map(|way| {
-                    let nodes: Vec<&OsmNode> = way.points(&self.osm).collect();
-                    let mut node_distances = vec![];
-
-                    for (i, &a) in nodes.iter().enumerate() {
-                        if i < nodes.iter().count() - 1 {
-                            let b = nodes[i + 1];
+                    way.points(&self.osm)
+                        .windows(2)
+                        .map(|line_segment| {
+                            let a = line_segment[0];
+                            let b = line_segment[1];
                             let destination = geo::nearest_point(a.into(), b.into(), pos.clone());
                             let distance = geo::distance(pos, &destination);
-                            node_distances.push((distance, destination, way));
-                        }
-                    }
-
-                    node_distances
-                        .into_iter()
-                        .min_by(|(x, _, _), (y, _, _)| {
+                            (destination, distance, way)
+                        })
+                        .min_by(|(_, x, _), (_, y, _)| {
                             x.partial_cmp(y).expect("Could not compare distances")
                         })
                         .expect("Could not find a nearest distance")
@@ -148,14 +143,13 @@ impl Model {
     }
 
     fn nearest_way(&self) -> &OsmWay {
-        let nearest_points = self.nearest_points();
+        let nearest_points = self.nearest_point_on_each_way();
 
-        let nearest_point = nearest_points
+        let (_, _, way) = nearest_points
             .iter()
-            .min_by(|(x, _, _), (y, _, _)| x.partial_cmp(y).expect("Could not compare distances"))
+            .min_by(|(_, x, _), (_, y, _)| x.partial_cmp(y).expect("Could not compare distances"))
             .expect("Could not find a nearest distance");
 
-        let (_, _, way) = nearest_point;
         way
     }
 }
