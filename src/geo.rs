@@ -134,120 +134,135 @@ impl From<&OsmNode> for Coord {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use assert_approx_eq::assert_approx_eq;
 
     const BERGEN: Coord = Coord {
-        lat: 60.390321,
-        lon: 5.328394,
+        lat: 60.39,
+        lon: 5.32,
     };
 
     const TRONDHEIM: Coord = Coord {
-        lat: 63.387661,
-        lon: 10.434604,
+        lat: 63.43,
+        lon: 10.39,
     };
 
-    const FORDE: Coord = Coord {
-        lat: 61.452202,
-        lon: 5.857147,
+    const AALESUND: Coord = Coord {
+        lat: 62.47,
+        lon: 6.15,
+    };
+
+    const STAVANGER: Coord = Coord {
+        lat: 58.97,
+        lon: 5.73,
     };
 
     #[test]
-    fn test_distance_points() {
+    fn test_distance() {
         let bergen = BERGEN;
         let trondheim = TRONDHEIM;
-        assert_approx_eq!(distance(&bergen, &trondheim), 427117.53826249886, 0.1);
+        assert_approx_eq!(distance(&bergen, &trondheim), 429539.2, 0.1);
     }
 
     #[test]
     fn test_bearing() {
         let bergen = BERGEN;
         let trondheim = TRONDHEIM;
-        assert_approx_eq!(bearing(&bergen, &trondheim), 36.52253184347995, 0.1);
+        assert_approx_eq!(bearing(&bergen, &trondheim), 35.93, 0.01);
     }
 
     #[test]
     fn test_destination() {
         let bergen = BERGEN;
         let trondheim = TRONDHEIM;
-        let e = destination(&bergen, 36.52253184347995, 427117.53826249886);
-        assert_approx_eq!(e.lat, trondheim.lat, 0.0000001);
-        assert_approx_eq!(e.lon, trondheim.lon, 0.0000001);
+        let e = destination(&bergen, 35.93, 429539.2);
+        assert_approx_eq!(e.lat, trondheim.lat, 0.001);
+        assert_approx_eq!(e.lon, trondheim.lon, 0.001);
     }
 
     #[test]
     fn test_destination_north() {
         let s = Coord {
-            lat: 53.3206,
-            lon: -1.7297,
+            lat: 53.32,
+            lon: -1.72,
         };
         let e = destination(&s, 0.0, 10000.0);
-        assert_approx_eq!(e.lat, 53.4, 0.1);
-        assert_approx_eq!(e.lon, -1.7297, 0.1);
+        assert_approx_eq!(e.lat, 53.41, 0.001);
+        assert_approx_eq!(e.lon, -1.72, 0.001);
     }
 
     #[test]
-    fn test_distance_line_point() {
+    fn test_cross_track_distance_aalesund() {
         let bergen = BERGEN;
         let trondheim = TRONDHEIM;
-        let forde = FORDE;
+        let aalesund = AALESUND;
         assert_approx_eq!(
-            cross_track_distance(&bergen, &trondheim, &forde),
-            -47755.6,
+            cross_track_distance(&bergen, &trondheim, &aalesund),
+            -101293.1,
             0.1
         );
     }
 
     #[test]
-    fn test_along_track_distance() {
+    fn test_cross_track_distance_stavanger() {
         let bergen = BERGEN;
         let trondheim = TRONDHEIM;
-        let forde = FORDE;
+        let stavanger = STAVANGER;
         assert_approx_eq!(
-            along_track_distance(&bergen, &trondheim, &forde),
-            111704.2,
+            cross_track_distance(&bergen, &trondheim, &stavanger),
+            111627.7,
             0.1
         );
     }
 
     #[test]
-    fn test_distance_line_point_pygeodesy() {
-        // https://github.com/mrJean1/PyGeodesy/blob/711eac98ded1391a0099edfa5f8882306031b7e0/pygeodesy/sphericalTrigonometry.py
-        let s = Coord {
-            lat: 53.3206,
-            lon: -1.7297,
-        };
-        let e = Coord {
-            lat: 53.1887,
-            lon: 0.1334,
-        };
-        let p = Coord {
-            lat: 53.2611,
-            lon: -0.7972,
-        };
-        assert_approx_eq!(cross_track_distance(&s, &e, &p), -307.6, 0.1);
+    fn test_along_track_distance_aalesund() {
+        let bergen = BERGEN;
+        let trondheim = TRONDHEIM;
+        let aalesund = AALESUND;
+        assert_approx_eq!(
+            along_track_distance(&bergen, &trondheim, &aalesund),
+            212561.3,
+            0.1
+        );
     }
 
     #[test]
-    fn test_along_track_distance_pygeodesy() {
-        // https://github.com/mrJean1/PyGeodesy/issues/7
-        let s = Coord {
-            lat: 53.3206,
-            lon: -1.7297,
-        };
-        let e = Coord {
-            lat: 53.1887,
-            lon: 0.1334,
-        };
-        let p1 = Coord {
-            lat: 53.36366,
-            lon: -1.83883,
-        };
-        let p2 = Coord {
-            lat: 53.35423,
-            lon: -1.60881,
-        };
-        assert_approx_eq!(along_track_distance(&s, &e, &p2), 7587.6, 0.1);
-        assert_approx_eq!(along_track_distance(&s, &e, &p1), -7702.7, 0.1);
+    fn test_along_track_distance_stavanger() {
+        let bergen = BERGEN;
+        let trondheim = TRONDHEIM;
+        let stavanger = STAVANGER;
+        assert_approx_eq!(
+            along_track_distance(&bergen, &trondheim, &stavanger),
+            -114024.1,
+            0.1
+        );
+    }
+
+    #[test]
+    fn test_nearest_point_aalesund() {
+        let bergen = BERGEN;
+        let trondheim = TRONDHEIM;
+        let aalesund = AALESUND;
+
+        let destination = destination(&bergen, 35.93, 212561.3);
+        let nearest_point = nearest_point(bergen, trondheim, aalesund);
+
+        assert_approx_eq!(nearest_point.lat, destination.lat, 0.001);
+        assert_approx_eq!(nearest_point.lon, destination.lon, 0.001);
+    }
+
+    #[test]
+    fn test_nearest_point_stavanger() {
+        let bergen = BERGEN;
+        let trondheim = TRONDHEIM;
+        let stavanger = STAVANGER;
+
+        let lat = bergen.lat;
+        let lon = bergen.lon;
+
+        let nearest_point = nearest_point(bergen, trondheim, stavanger);
+
+        assert_approx_eq!(nearest_point.lat, lat, 0.001);
+        assert_approx_eq!(nearest_point.lon, lon, 0.001);
     }
 }
