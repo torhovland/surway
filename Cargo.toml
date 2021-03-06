@@ -11,7 +11,7 @@ leaflet = "0.1.2"
 log = "0.4.14"
 quick-xml = { version = "0.22.0", features = ["serialize"] }
 seed = "0.8.0"
-serde = "1.0.123"
+serde = "1.0.124"
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
