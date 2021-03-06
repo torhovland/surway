@@ -1,6 +1,6 @@
 use crate::osm::{OsmDocument, OsmNode, OsmWay};
 
-const R: f64 = 6371009.0;
+const R: f64 = 6371008.8; // mean Earth radius
 
 #[derive(Clone)]
 pub struct Coord {
