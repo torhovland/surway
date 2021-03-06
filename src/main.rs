@@ -129,7 +129,7 @@ impl Model {
                         .map(|line_segment| {
                             let a = line_segment[0];
                             let b = line_segment[1];
-                            let destination = geo::nearest_point(a.into(), b.into(), pos.clone());
+                            let destination = geo::nearest_point(&a.into(), &b.into(), pos);
                             let distance = geo::distance(pos, &destination);
                             (destination, distance, way)
                         })

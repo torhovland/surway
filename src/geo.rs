@@ -12,33 +12,26 @@ pub struct Coord {
 
 pub fn distance(c1: &Coord, c2: &Coord) -> f64 {
     // Haversine formula
-    let phi1 = c1.phi();
-    let phi2 = c2.phi();
-    let lambda1 = c1.lambda();
-    let lambda2 = c2.lambda();
+    let (phi1, phi2) = (c1.phi(), c2.phi());
+    let (lambda1, lambda2) = (c1.lambda(), c2.lambda());
     let delta_phi = phi2 - phi1;
     let delta_lambda = lambda2 - lambda1;
     let a = (delta_phi / 2.0).sin().powi(2)
         + phi1.cos() * phi2.cos() * (delta_lambda / 2.0).sin().powi(2);
-    let c = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
-    R * c
+    R * 2.0 * a.sqrt().atan2((1.0 - a).sqrt())
 }
 
 pub fn bearing(c1: &Coord, c2: &Coord) -> f64 {
-    let phi1 = c1.phi();
-    let phi2 = c2.phi();
-    let lambda1 = c1.lambda();
-    let lambda2 = c2.lambda();
+    let (phi1, phi2) = (c1.phi(), c2.phi());
+    let (lambda1, lambda2) = (c1.lambda(), c2.lambda());
     let delta_lambda = lambda2 - lambda1;
     let y = delta_lambda.sin() * phi2.cos();
     let x = phi1.cos() * phi2.sin() - phi1.sin() * phi2.cos() * delta_lambda.cos();
-    let theta = y.atan2(x);
-    (theta.to_degrees() + 360.0) % 360.0
+    (y.atan2(x).to_degrees() + 360.0) % 360.0
 }
 
 pub fn destination(c1: &Coord, bearing: f64, distance: f64) -> Coord {
-    let phi1 = c1.phi();
-    let lambda1 = c1.lambda();
+    let (phi1, lambda1) = (c1.phi(), c1.lambda());
     let brng = bearing.to_radians();
     let phi2 =
         (phi1.sin() * (distance / R).cos() + phi1.cos() * (distance / R).sin() * brng.cos()).asin();
@@ -52,47 +45,42 @@ pub fn destination(c1: &Coord, bearing: f64, distance: f64) -> Coord {
     }
 }
 
-pub fn cross_track_distance(c1: &Coord, c2: &Coord, c3: &Coord) -> f64 {
-    let d13 = distance(c1, c3);
-    let d_13_angular = d13 / R;
-    let theta13 = bearing(c1, c3).to_radians();
-    let theta12 = bearing(c1, c2).to_radians();
-    let delta_theta = theta13 - theta12;
-    let x = (d_13_angular.sin() * delta_theta.sin()).asin();
-    R * x
+fn angular_distance(c1: &Coord, c2: &Coord) -> f64 {
+    distance(c1, c2) / R
+}
+
+fn delta_theta(c1: &Coord, c2: &Coord, c3: &Coord) -> f64 {
+    bearing(c1, c3).to_radians() - bearing(c1, c2).to_radians()
+}
+
+fn cross_track_distance(c1: &Coord, c2: &Coord, c3: &Coord) -> f64 {
+    R * (angular_distance(c1, c3).sin() * delta_theta(c1, c2, c3).sin()).asin()
 }
 
 pub fn along_track_distance(c1: &Coord, c2: &Coord, c3: &Coord) -> f64 {
     // A version with negative sign if we end up before the start point (c1)
     // https://github.com/mrJean1/PyGeodesy/blob/master/pygeodesy/sphericalTrigonometry.py
 
-    let d13 = distance(c1, c3);
-    let d_13_angular = d13 / R;
-    let theta13 = bearing(c1, c3).to_radians();
-    let theta12 = bearing(c1, c2).to_radians();
-    let delta_theta = theta13 - theta12;
-    let x = (d_13_angular.sin() * delta_theta.sin()).asin();
+    let x = (angular_distance(c1, c3).sin() * delta_theta(c1, c2, c3).sin()).asin();
 
     if x.cos().abs() > f64::EPSILON {
-        R * (d_13_angular.cos() / x.cos())
+        R * (angular_distance(c1, c3).cos() / x.cos())
             .acos()
-            .copysign(delta_theta.cos())
+            .copysign(delta_theta(c1, c2, c3).cos())
     } else {
         0.0
     }
 }
 
-pub fn nearest_point(c1: Coord, c2: Coord, c3: Coord) -> Coord {
-    let length = distance(&c1, &c2);
-    let along_track_distance = along_track_distance(&c1, &c2, &c3);
-    let bearing = bearing(&c1, &c2);
+pub fn nearest_point(c1: &Coord, c2: &Coord, c3: &Coord) -> Coord {
+    let along_track_distance = along_track_distance(c1, c2, c3);
 
     if along_track_distance < 0.0 {
-        c1
-    } else if along_track_distance > length {
-        c2
+        c1.clone()
+    } else if along_track_distance > distance(c1, c2) {
+        c2.clone()
     } else {
-        destination(&c1, bearing, along_track_distance)
+        destination(c1, bearing(c1, c2), along_track_distance)
     }
 }
 
@@ -136,47 +124,41 @@ mod tests {
     use super::*;
     use assert_approx_eq::assert_approx_eq;
 
-    const BERGEN: Coord = Coord {
+    static BERGEN: Coord = Coord {
         lat: 60.39,
         lon: 5.32,
     };
 
-    const TRONDHEIM: Coord = Coord {
+    static TRONDHEIM: Coord = Coord {
         lat: 63.43,
         lon: 10.39,
     };
 
-    const AALESUND: Coord = Coord {
+    static AALESUND: Coord = Coord {
         lat: 62.47,
         lon: 6.15,
     };
 
-    const STAVANGER: Coord = Coord {
+    static STAVANGER: Coord = Coord {
         lat: 58.97,
         lon: 5.73,
     };
 
     #[test]
     fn test_distance() {
-        let bergen = BERGEN;
-        let trondheim = TRONDHEIM;
-        assert_approx_eq!(distance(&bergen, &trondheim), 429539.2, 0.1);
+        assert_approx_eq!(distance(&BERGEN, &TRONDHEIM), 429539.2, 0.1);
     }
 
     #[test]
     fn test_bearing() {
-        let bergen = BERGEN;
-        let trondheim = TRONDHEIM;
-        assert_approx_eq!(bearing(&bergen, &trondheim), 35.93, 0.01);
+        assert_approx_eq!(bearing(&BERGEN, &TRONDHEIM), 35.93, 0.01);
     }
 
     #[test]
     fn test_destination() {
-        let bergen = BERGEN;
-        let trondheim = TRONDHEIM;
-        let e = destination(&bergen, 35.93, 429539.2);
-        assert_approx_eq!(e.lat, trondheim.lat, 0.001);
-        assert_approx_eq!(e.lon, trondheim.lon, 0.001);
+        let e = destination(&BERGEN, 35.93, 429539.2);
+        assert_approx_eq!(e.lat, TRONDHEIM.lat, 0.001);
+        assert_approx_eq!(e.lon, TRONDHEIM.lon, 0.001);
     }
 
     #[test]
@@ -192,11 +174,8 @@ mod tests {
 
     #[test]
     fn test_cross_track_distance_aalesund() {
-        let bergen = BERGEN;
-        let trondheim = TRONDHEIM;
-        let aalesund = AALESUND;
         assert_approx_eq!(
-            cross_track_distance(&bergen, &trondheim, &aalesund),
+            cross_track_distance(&BERGEN, &TRONDHEIM, &AALESUND),
             -101293.1,
             0.1
         );
@@ -204,11 +183,8 @@ mod tests {
 
     #[test]
     fn test_cross_track_distance_stavanger() {
-        let bergen = BERGEN;
-        let trondheim = TRONDHEIM;
-        let stavanger = STAVANGER;
         assert_approx_eq!(
-            cross_track_distance(&bergen, &trondheim, &stavanger),
+            cross_track_distance(&BERGEN, &TRONDHEIM, &STAVANGER),
             111627.7,
             0.1
         );
@@ -216,11 +192,8 @@ mod tests {
 
     #[test]
     fn test_along_track_distance_aalesund() {
-        let bergen = BERGEN;
-        let trondheim = TRONDHEIM;
-        let aalesund = AALESUND;
         assert_approx_eq!(
-            along_track_distance(&bergen, &trondheim, &aalesund),
+            along_track_distance(&BERGEN, &TRONDHEIM, &AALESUND),
             212561.3,
             0.1
         );
@@ -228,11 +201,8 @@ mod tests {
 
     #[test]
     fn test_along_track_distance_stavanger() {
-        let bergen = BERGEN;
-        let trondheim = TRONDHEIM;
-        let stavanger = STAVANGER;
         assert_approx_eq!(
-            along_track_distance(&bergen, &trondheim, &stavanger),
+            along_track_distance(&BERGEN, &TRONDHEIM, &STAVANGER),
             -114024.1,
             0.1
         );
@@ -240,12 +210,8 @@ mod tests {
 
     #[test]
     fn test_nearest_point_aalesund() {
-        let bergen = BERGEN;
-        let trondheim = TRONDHEIM;
-        let aalesund = AALESUND;
-
-        let destination = destination(&bergen, 35.93, 212561.3);
-        let nearest_point = nearest_point(bergen, trondheim, aalesund);
+        let destination = destination(&BERGEN, 35.93, 212561.3);
+        let nearest_point = nearest_point(&BERGEN, &TRONDHEIM, &AALESUND);
 
         assert_approx_eq!(nearest_point.lat, destination.lat, 0.001);
         assert_approx_eq!(nearest_point.lon, destination.lon, 0.001);
@@ -253,14 +219,10 @@ mod tests {
 
     #[test]
     fn test_nearest_point_stavanger() {
-        let bergen = BERGEN;
-        let trondheim = TRONDHEIM;
-        let stavanger = STAVANGER;
+        let lat = BERGEN.lat;
+        let lon = BERGEN.lon;
 
-        let lat = bergen.lat;
-        let lon = bergen.lon;
-
-        let nearest_point = nearest_point(bergen, trondheim, stavanger);
+        let nearest_point = nearest_point(&BERGEN, &TRONDHEIM, &STAVANGER);
 
         assert_approx_eq!(nearest_point.lat, lat, 0.001);
         assert_approx_eq!(nearest_point.lon, lon, 0.001);
