@@ -219,12 +219,9 @@ mod tests {
 
     #[test]
     fn test_nearest_point_stavanger() {
-        let lat = BERGEN.lat;
-        let lon = BERGEN.lon;
-
         let nearest_point = nearest_point(&BERGEN, &TRONDHEIM, &STAVANGER);
 
-        assert_approx_eq!(nearest_point.lat, lat, 0.001);
-        assert_approx_eq!(nearest_point.lon, lon, 0.001);
+        assert_approx_eq!(nearest_point.lat, BERGEN.lat, 0.001);
+        assert_approx_eq!(nearest_point.lon, BERGEN.lon, 0.001);
     }
 }
