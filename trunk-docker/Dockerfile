@@ -3,6 +3,7 @@ RUN apt-get -y update && \
     apt-get -y install \
         binaryen \
         build-essential \
+        git \
         libssl-dev \
         pkg-config && \
     rm -rf /var/lib/apt/lists/* && \
