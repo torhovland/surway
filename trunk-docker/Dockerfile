@@ -1,4 +1,12 @@
-FROM rust:1.50
-RUN rustup target add wasm32-unknown-unknown && \
+FROM rust:1.50-slim
+RUN apt-get -y update && \
+    apt-get -y install \
+        binaryen \
+        build-essential \
+        libssl-dev \
+        pkg-config && \
+    rm -rf /var/lib/apt/lists/* && \
+    rustup target add wasm32-unknown-unknown && \
     cargo install wasm-bindgen-cli --version 0.2.71 && \
-    cargo install --locked trunk --version 0.8.3
+    cargo install trunk --version 0.9.2 && \
+    rm -rf /usr/local/cargo/registry
