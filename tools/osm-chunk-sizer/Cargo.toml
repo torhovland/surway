@@ -1,0 +1,14 @@
+[package]
+name = "osm-chunk-sizer"
+version = "0.1.0"
+authors = ["Tor Hovland <tor.hovland@bekk.no>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+geo-types = "0.4.3"
+gpx = "0.8.1"
+reqwest = "0.11.1"
+stopwatch = "0.0.7"
+tokio = { version = "1.2.0", features=["full"] }
