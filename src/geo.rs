@@ -53,10 +53,6 @@ fn delta_theta(c1: &Coord, c2: &Coord, c3: &Coord) -> f64 {
     bearing(c1, c3).to_radians() - bearing(c1, c2).to_radians()
 }
 
-fn cross_track_distance(c1: &Coord, c2: &Coord, c3: &Coord) -> f64 {
-    R * (angular_distance(c1, c3).sin() * delta_theta(c1, c2, c3).sin()).asin()
-}
-
 pub fn along_track_distance(c1: &Coord, c2: &Coord, c3: &Coord) -> f64 {
     // A version with negative sign if we end up before the start point (c1)
     // https://github.com/mrJean1/PyGeodesy/blob/master/pygeodesy/sphericalTrigonometry.py
@@ -170,24 +166,6 @@ mod tests {
         let e = destination(&s, 0.0, 10000.0);
         assert_approx_eq!(e.lat, 53.41, 0.001);
         assert_approx_eq!(e.lon, -1.72, 0.001);
-    }
-
-    #[test]
-    fn test_cross_track_distance_aalesund() {
-        assert_approx_eq!(
-            cross_track_distance(&BERGEN, &TRONDHEIM, &AALESUND),
-            -101293.1,
-            0.1
-        );
-    }
-
-    #[test]
-    fn test_cross_track_distance_stavanger() {
-        assert_approx_eq!(
-            cross_track_distance(&BERGEN, &TRONDHEIM, &STAVANGER),
-            111627.7,
-            0.1
-        );
     }
 
     #[test]
