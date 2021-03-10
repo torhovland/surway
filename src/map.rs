@@ -75,14 +75,21 @@ pub fn render_topology(model: &Model) {
     }
 }
 
-pub fn render_position(model: &Model) {
+pub fn render_position(model: &Model) -> Option<Circle> {
     if let (Some(map), Some(position)) = (&model.map, &model.position) {
-        Circle::new_with_options(
+        if let Some(layer) = &model.position_layer {
+            layer.remove();
+        }
+
+        let circle = Circle::new_with_options(
             &LatLng::from(position),
             &JsValue::from_serde(&CircleOptions { radius: 3.5 })
                 .expect("Unable to serialize circle options"),
-        )
-        .addTo(&map);
+        );
+        circle.addTo(&map);
+        Some(circle)
+    } else {
+        None
     }
 }
 

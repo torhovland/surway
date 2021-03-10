@@ -1,7 +1,8 @@
 use cfg_if::cfg_if;
-use geo::Coord;
-use leaflet::Map;
+use geo::{destination, Coord};
+use leaflet::{Circle, Map};
 use osm::{OsmDocument, OsmWay};
+use rand::prelude::*;
 use seed::{prelude::*, *};
 
 mod geo;
@@ -10,13 +11,16 @@ mod osm;
 
 pub struct Model {
     map: Option<Map>,
+    position_layer: Option<Circle>,
     osm: OsmDocument,
     position: Option<Coord>,
+    timer_handle: StreamHandle,
 }
 
 enum Msg {
     SetMap(Map),
     OsmFetched(fetch::Result<String>),
+    OnTick,
 }
 
 fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
@@ -32,11 +36,13 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
 
     Model {
         map: None,
+        position_layer: None,
         osm: OsmDocument::new(),
         position: Some(Coord {
             lat: 63.4015,
             lon: 10.2935,
         }),
+        timer_handle: orders.stream_with_handle(streams::interval(100, || Msg::OnTick)),
     }
 }
 
@@ -58,7 +64,6 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
             model.map = Some(map);
             map::set_view(&model);
             map::render_topology(&model);
-            map::render_position(&model);
         }
 
         Msg::OsmFetched(Ok(response_data)) => {
@@ -70,6 +75,17 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
 
         Msg::OsmFetched(Err(fetch_error)) => {
             error!("Fetching OSM data failed: {:#?}", fetch_error);
+        }
+
+        Msg::OnTick => {
+            if let Some(pos) = &model.position {
+                println!("Some(pos)");
+                let mut rng = thread_rng();
+                let bearing = rng.gen_range(0.0..360.0);
+                let distance = rng.gen_range(0.0..1.0);
+                model.position = Some(destination(pos, bearing, distance));
+                model.position_layer = map::render_position(&model);
+            }
         }
     }
 }
