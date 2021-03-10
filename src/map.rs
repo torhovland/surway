@@ -1,5 +1,5 @@
 use crate::{geo::Coord, osm::OsmNode, Model};
-use leaflet::{Circle, LatLng, Map, Polyline, TileLayer};
+use leaflet::{Circle, LatLng, LayerGroup, Map, Polyline, TileLayer};
 use seed::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -14,8 +14,11 @@ struct CircleOptions {
     radius: f64,
 }
 
-pub fn init() -> Map {
+pub fn init() -> (Map, LayerGroup) {
     let map = Map::new("map", &JsValue::NULL);
+
+    let position_layer_group = LayerGroup::new();
+    position_layer_group.addTo(&map);
 
     TileLayer::new(
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -23,7 +26,7 @@ pub fn init() -> Map {
     )
     .addTo(&map);
 
-    map
+    (map, position_layer_group)
 }
 
 pub fn set_view(model: &Model) {
@@ -42,54 +45,58 @@ pub fn render_topology(model: &Model) {
                     .map(JsValue::from)
                     .collect(),
                 &JsValue::from_serde(&PolylineOptions {
-                    color: if model.nearest_way().id == way.id {
-                        "blue"
-                    } else {
-                        "green"
-                    }
-                    .into(),
+                    color: "green".into(),
                     weight: 2,
                 })
                 .expect("Unable to serialize polyline options"),
             )
             .addTo(&map);
         }
-
-        if let Some(pos) = &model.position {
-            for (destination, _, _) in model.nearest_point_on_each_way().iter() {
-                Polyline::new_with_options(
-                    vec![pos, destination]
-                        .into_iter()
-                        .map(LatLng::from)
-                        .map(JsValue::from)
-                        .collect(),
-                    &JsValue::from_serde(&PolylineOptions {
-                        color: "red".into(),
-                        weight: 1,
-                    })
-                    .expect("Unable to serialize polyline options"),
-                )
-                .addTo(&map);
-            }
-        }
     }
 }
 
-pub fn render_position(model: &Model) -> Option<Circle> {
-    if let (Some(map), Some(position)) = (&model.map, &model.position) {
-        if let Some(layer) = &model.position_layer {
-            layer.remove();
-        }
+pub fn render_position(model: &Model) {
+    if let (Some(position_layer_group), Some(position)) =
+        (&model.position_layer_group, &model.position)
+    {
+        position_layer_group.clearLayers();
 
-        let circle = Circle::new_with_options(
+        position_layer_group.addLayer(&Circle::new_with_options(
             &LatLng::from(position),
             &JsValue::from_serde(&CircleOptions { radius: 3.5 })
                 .expect("Unable to serialize circle options"),
-        );
-        circle.addTo(&map);
-        Some(circle)
-    } else {
-        None
+        ));
+
+        if let Some(nearest) = model.nearest_way() {
+            position_layer_group.addLayer(&Polyline::new_with_options(
+                nearest
+                    .points(&model.osm)
+                    .into_iter()
+                    .map(LatLng::from)
+                    .map(JsValue::from)
+                    .collect(),
+                &JsValue::from_serde(&PolylineOptions {
+                    color: "blue".into(),
+                    weight: 2,
+                })
+                .expect("Unable to serialize polyline options"),
+            ));
+        }
+
+        for (destination, _, _) in model.nearest_point_on_each_way().iter() {
+            position_layer_group.addLayer(&Polyline::new_with_options(
+                vec![position, destination]
+                    .into_iter()
+                    .map(LatLng::from)
+                    .map(JsValue::from)
+                    .collect(),
+                &JsValue::from_serde(&PolylineOptions {
+                    color: "red".into(),
+                    weight: 1,
+                })
+                .expect("Unable to serialize polyline options"),
+            ));
+        }
     }
 }
 

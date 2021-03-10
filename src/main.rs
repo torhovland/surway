@@ -1,6 +1,6 @@
 use cfg_if::cfg_if;
 use geo::{destination, Coord};
-use leaflet::{Circle, Map};
+use leaflet::{LayerGroup, Map};
 use osm::{OsmDocument, OsmWay};
 use rand::prelude::*;
 use seed::{prelude::*, *};
@@ -11,38 +11,34 @@ mod osm;
 
 pub struct Model {
     map: Option<Map>,
-    position_layer: Option<Circle>,
+    position_layer_group: Option<LayerGroup>,
     osm: OsmDocument,
     position: Option<Coord>,
-    timer_handle: StreamHandle,
 }
 
 enum Msg {
-    SetMap(Map),
+    SetMap((Map, LayerGroup)),
     OsmFetched(fetch::Result<String>),
-    OnTick,
+    RandomWalk,
 }
 
-fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
-    // Cannot initialize Leaflet until the map element has rendered.
-    orders.after_next_render(|_| {
-        let map_view = map::init();
-        Msg::SetMap(map_view)
-    });
-
+fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     orders
-        .skip()
+        .after_next_render(|_| Msg::SetMap(map::init())) // Cannot initialize Leaflet until the map element has rendered.
         .perform_cmd(async { Msg::OsmFetched(send_osm_request().await) });
+
+    if url.search().contains_key("random_walk") {
+        orders.stream(streams::interval(100, || Msg::RandomWalk));
+    }
 
     Model {
         map: None,
-        position_layer: None,
+        position_layer_group: None,
         osm: OsmDocument::new(),
         position: Some(Coord {
             lat: 63.4015,
             lon: 10.2935,
         }),
-        timer_handle: orders.stream_with_handle(streams::interval(100, || Msg::OnTick)),
     }
 }
 
@@ -60,8 +56,9 @@ async fn send_osm_request() -> fetch::Result<String> {
 
 fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
     match msg {
-        Msg::SetMap(map) => {
+        Msg::SetMap((map, position_layer_group)) => {
             model.map = Some(map);
+            model.position_layer_group = Some(position_layer_group);
             map::set_view(&model);
             map::render_topology(&model);
         }
@@ -77,14 +74,13 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
             error!("Fetching OSM data failed: {:#?}", fetch_error);
         }
 
-        Msg::OnTick => {
+        Msg::RandomWalk => {
             if let Some(pos) = &model.position {
-                println!("Some(pos)");
                 let mut rng = thread_rng();
                 let bearing = rng.gen_range(0.0..360.0);
-                let distance = rng.gen_range(0.0..1.0);
+                let distance = rng.gen_range(0.0..5.0);
                 model.position = Some(destination(pos, bearing, distance));
-                model.position_layer = map::render_position(&model);
+                map::render_position(&model);
             }
         }
     }
@@ -158,14 +154,13 @@ impl Model {
         }
     }
 
-    fn nearest_way(&self) -> &OsmWay {
+    fn nearest_way(&self) -> Option<&OsmWay> {
         let nearest_points = self.nearest_point_on_each_way();
 
-        let (_, _, way) = nearest_points
-            .iter()
-            .min_by(|(_, x, _), (_, y, _)| x.partial_cmp(y).expect("Could not compare distances"))
-            .expect("Could not find a nearest distance");
+        let (_, _, way) = nearest_points.iter().min_by(|(_, x, _), (_, y, _)| {
+            x.partial_cmp(y).expect("Could not compare distances")
+        })?;
 
-        way
+        Some(way)
     }
 }
