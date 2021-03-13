@@ -1,7 +1,26 @@
+body {
+    margin: 0;
+}
+
 img.leaflet-tile {
     filter: saturate(25%);
 }
 
+.content {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: "Noto Sans JP", sans-serif;
+    font-size: 60px;
+}
+
 #map {
-    height: 75vh;
+    flex-grow: 1;
+}
+
+.way-info {
+    flex-grow: 0;
+    padding: 1rem;
+    background-color: black;
+    color: white;
 }

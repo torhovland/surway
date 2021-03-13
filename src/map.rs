@@ -31,7 +31,7 @@ pub fn init() -> (Map, LayerGroup) {
 
 pub fn set_view(model: &Model) {
     if let (Some(map), Some(position)) = (&model.map, &model.position) {
-        map.setView(&position.into(), 17.0);
+        map.setView(&position.into(), 19.0);
     }
 }
 
