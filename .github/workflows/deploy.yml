@@ -11,15 +11,15 @@ jobs:
       - name: Update apt
         run: apt-get update
 
-      - name: Install npm
-        run: apt-get -y install npm
-
-      - name: Install npm packages
-        run: npm install
+      - name: Install build tools
+        run: apt-get -y install npm curl
 
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       
+      - name: Install npm packages
+        run: npm install
+
       - name: Build
         run: npm run build
 
