@@ -12,7 +12,7 @@ jobs:
         run: apt-get update
 
       - name: Install build tools
-        run: apt-get -y install npm curl
+        run: apt-get -y install curl git npm
 
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
