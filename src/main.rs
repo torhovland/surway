@@ -5,10 +5,96 @@ use log::{error, info};
 use osm::{OsmDocument, OsmWay};
 use rand::prelude::*;
 use seed::{fetch::StatusCategory, prelude::*, *};
+use serde::Deserialize;
 
 mod geo;
 mod map;
 mod osm;
+
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen(inline_js = "export function name() {
+    return 'Rust';
+};
+
+export class MyClass {
+    constructor() {
+        this._number = 42;
+    }
+
+    get number() {
+        return this._number;
+    }
+
+    set number(n) {
+        return this._number = n;
+    }
+
+    render() {
+        return `My number is: ${this.number}`;
+    }
+};
+
+function sleep(ms) {
+    var unixtime_ms = new Date().getTime();
+    while(new Date().getTime() < unixtime_ms + ms) {}
+}
+
+export class GeoLocator {
+    get latitude() {
+        return this._latitude;
+    }
+
+    get longitude() {
+        return this._longitude;
+    }
+
+    locate() {
+        hello_rust();
+        
+        var success = (function (position) {
+            this._latitude = position.coords.latitude;
+            this._longitude = position.coords.longitude;
+            console.log(`Latitude: ${this._latitude} °, Longitude: ${this._longitude} °`);
+          }).bind(this);
+    
+          function error() {
+            console.log('Unable to retrieve your location');
+          }
+    
+          if (!navigator.geolocation) {
+            console.log('Geolocation is not supported by your browser');
+          } else {
+            console.log('Locating…');
+            navigator.geolocation.getCurrentPosition(success, error);
+          }    
+
+        return 'foo';
+    }    
+};
+")]
+
+extern "C" {
+    type MyClass;
+    type GeoLocator;
+
+    #[wasm_bindgen(constructor)]
+    fn new() -> GeoLocator;
+
+    #[wasm_bindgen(method, getter)]
+    fn latitude(this: &GeoLocator) -> f64;
+
+    #[wasm_bindgen(method, getter)]
+    fn longitude(this: &GeoLocator) -> f64;
+
+    #[wasm_bindgen(method)]
+    fn locate(this: &GeoLocator) -> String;
+}
+
+#[wasm_bindgen]
+pub fn hello_rust() {
+    info!("Hello from Rust!");
+}
 
 pub struct Model {
     map: Option<Map>,
@@ -26,6 +112,28 @@ enum Msg {
     InvalidateMapSize,
     OsmFetched(fetch::Result<String>),
     RandomWalk,
+    Increment,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GeolocationCoordinates {
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GeolocationPosition {
+    pub coords: GeolocationCoordinates,
+}
+
+fn geo_callback(position: JsValue) {
+    // let pos: GeolocationPosition =
+    //     JsValue::into_serde(&position).expect("Unable to deserialize GeolocationPosition.");
+    //info!("Geo callback: {:?}", position);
+    unsafe {
+        let s = js_sys::JSON::stringify(&position).expect("Unable to stringify JSON");
+        info!("Geo callback: {:?}", s);
+    }
 }
 
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
@@ -159,11 +267,33 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 model.position = Some(destination(pos, bearing, distance));
             }
         }
+
+        Msg::Increment => {
+            let geo_locator = GeoLocator::new();
+            geo_locator.locate();
+            info!("{}", &geo_locator.latitude());
+            info!("{}", &geo_locator.longitude());
+
+            // let window = web_sys::window().expect("Unable to get browser window.");
+            // let navigator = window.navigator();
+            // let geolocation = navigator.geolocation().expect("Unable to get geolocation.");
+            // let geo_callback_function =
+            //     Closure::wrap(Box::new(geo_callback) as Box<dyn FnMut(JsValue)>);
+            // geolocation
+            //     .get_current_position(geo_callback_function.as_ref().unchecked_ref())
+            //     .expect("Unable to get position.");
+            // geo_callback_function.forget();
+        }
     }
 }
 
 fn view(model: &Model) -> Node<Msg> {
-    div![C!["content"], div![id!["map"]], view_way(&model),]
+    div![
+        C!["content"],
+        div![id!["map"]],
+        button!["Locate!", ev(Ev::Click, |_| Msg::Increment),],
+        view_way(&model),
+    ]
 }
 
 fn view_way(model: &Model) -> Node<Msg> {

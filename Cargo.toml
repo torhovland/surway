@@ -13,6 +13,7 @@ quick-xml = { version = "0.22.0", features = ["serialize"] }
 rand = "0.8.3"
 seed = "0.8.0"
 serde = "1.0.124"
+web-sys = { version = "0.3.48", features = ["Geolocation", "Navigator"] }
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
