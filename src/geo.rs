@@ -8,6 +8,11 @@ pub struct Coord {
     pub lon: f64,
 }
 
+pub struct BoundingBox {
+    pub lower_left: Coord,
+    pub upper_right: Coord,
+}
+
 // Formulas from https://www.movable-type.co.uk/scripts/latlong.html
 
 pub fn distance(c1: &Coord, c2: &Coord) -> f64 {
@@ -87,6 +92,24 @@ impl Coord {
 
     fn lambda(self: &Coord) -> f64 {
         self.lon.to_radians()
+    }
+
+    pub fn bbox(self: &Coord, radius: f64) -> BoundingBox {
+        let north = destination(self, 0.0, radius);
+        let east = destination(self, 90.0, radius);
+        let south = destination(self, 180.0, radius);
+        let west = destination(self, 270.0, radius);
+
+        BoundingBox {
+            lower_left: Coord {
+                lat: south.lat,
+                lon: west.lon,
+            },
+            upper_right: Coord {
+                lat: north.lat,
+                lon: east.lon,
+            },
+        }
     }
 }
 

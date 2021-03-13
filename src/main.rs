@@ -1,9 +1,10 @@
 use cfg_if::cfg_if;
-use geo::{destination, Coord};
+use geo::{destination, BoundingBox, Coord};
 use leaflet::{LayerGroup, Map};
+use log::{error, info};
 use osm::{OsmDocument, OsmWay};
 use rand::prelude::*;
-use seed::{prelude::*, *};
+use seed::{fetch::StatusCategory, prelude::*, *};
 
 mod geo;
 mod map;
@@ -28,9 +29,17 @@ enum Msg {
 }
 
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
-    orders
-        .after_next_render(|_| Msg::SetMap(map::init())) // Cannot initialize Leaflet until the map element has rendered.
-        .perform_cmd(async { Msg::OsmFetched(send_osm_request().await) });
+    let position = Coord {
+        lat: 63.4015,
+        lon: 10.2935,
+    };
+
+    let radius = 500.0;
+    let bbox = position.bbox(radius);
+
+    orders.after_next_render(|_| Msg::SetMap(map::init())); // Cannot initialize Leaflet until the map element has rendered.
+
+    orders.perform_cmd(async move { Msg::OsmFetched(send_osm_request(&bbox).await) });
 
     if url.search().contains_key("random_walk") {
         orders.stream(streams::interval(1000, || Msg::RandomWalk));
@@ -41,29 +50,61 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         topology_layer_group: None,
         position_layer_group: None,
         osm: OsmDocument::new(),
-        position: Some(Coord {
-            lat: 63.4015,
-            lon: 10.2935,
-        }),
-        osm_chunk_position: Some(Coord {
-            lat: 63.4015,
-            lon: 10.2935,
-        }),
-        osm_chunk_radius: 100.0,
-        osm_chunk_trigger_factor: 0.5,
+        position: Some(position),
+        osm_chunk_position: Some(position),
+        osm_chunk_radius: radius,
+        osm_chunk_trigger_factor: 0.8,
     }
 }
 
-fn get_osm_request_url() -> &'static str {
-    "https://www.openstreetmap.org/api/0.6/map?bbox=10.29072%2C63.39981%2C10.29426%2C63.40265"
+// fn get_osm_request_url(position: Coord) -> &'static str {
+//     "https://www.openstreetmap.org/api/0.6/map?bbox=10.29072%2C63.39981%2C10.29426%2C63.40265"
+// }
+
+// async fn send_osm_request(bbox: Coord) -> fetch::Result<String> {
+//     fetch(get_osm_request_url(position))
+//         .await?
+//         .check_status()?
+//         .text()
+//         .await
+// }
+
+fn get_osm_query(bbox: &BoundingBox) -> String {
+    format!(
+        "way({},{},{},{})[\"highway\"]; (._;>;); out;",
+        bbox.lower_left.lat, bbox.lower_left.lon, bbox.upper_right.lat, bbox.upper_right.lon
+    )
 }
 
-async fn send_osm_request() -> fetch::Result<String> {
-    fetch(get_osm_request_url())
-        .await?
-        .check_status()?
-        .text()
+async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
+    let url = "https://overpass-api.de/api/interpreter";
+    let query = get_osm_query(bbox);
+    info!("Fetching query {}", query);
+
+    let response = Request::new(url)
+        .method(Method::Post)
+        //.header(Header::custom("Accept-Encoding", "gzip"))
+        .text(query)
+        .fetch()
         .await
+        .expect("OSM request failed");
+    let status = response.status();
+    let body = response.text().await.expect("Unable to get response text");
+
+    if status.category == StatusCategory::Success {
+        return Ok(body);
+    }
+    // else if status.code == 429 && status.code == 504 {
+    //     return Err(FetchError::StatusError(status));
+    // }
+    else {
+        return Err(FetchError::StatusError(status));
+    }
+
+    //     info!("Waiting 30 seconds ...");
+    //     thread::sleep(time::Duration::from_secs(30));
+
+    //     info!("Retrying...");
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -86,7 +127,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.osm = quick_xml::de::from_str(&response_data)
                 .expect("Unable to deserialize the OSM data");
 
-            log!("Rendering a new OSM topology.");
+            info!("Rendering a new OSM topology.");
             map::render_topology(&model);
         }
 
@@ -98,19 +139,24 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             if let Some(pos) = &model.position {
                 let mut rng = thread_rng();
                 let bearing = rng.gen_range(0.0..360.0);
-                let distance = rng.gen_range(0.0..50.0);
-                model.position = Some(destination(pos, bearing, distance));
+                let distance = rng.gen_range(0.0..200.0);
                 map::pan_to_position(&model);
                 map::render_position(&model);
 
                 if model.is_outside_osm_trigger_box() {
-                    log!("Outside OSM trigger box. Initiating download.");
+                    info!("Outside OSM trigger box. Initiating download.");
                     model.osm_chunk_position = model.position;
                     map::render_topology(&model);
+
+                    let bbox = pos.bbox(model.osm_chunk_radius);
+                    orders
+                        .perform_cmd(async move { Msg::OsmFetched(send_osm_request(&bbox).await) });
                 }
 
                 // Make sure the map is centered on our position even if the size of the map has changed
                 orders.after_next_render(|_| Msg::InvalidateMapSize);
+
+                model.position = Some(destination(pos, bearing, distance));
             }
         }
     }
@@ -221,12 +267,12 @@ impl Model {
     fn is_outside_osm_trigger_box(&self) -> bool {
         if let (Some(pos), Some(chunk_pos)) = (&self.position, &self.osm_chunk_position) {
             let radius = self.osm_chunk_radius * self.osm_chunk_trigger_factor;
-            let north = destination(chunk_pos, 0.0, radius);
-            let east = destination(chunk_pos, 90.0, radius);
-            let south = destination(chunk_pos, 180.0, radius);
-            let west = destination(chunk_pos, 270.0, radius);
+            let bbox = chunk_pos.bbox(radius);
 
-            pos.lat > north.lat || pos.lon > east.lon || pos.lat < south.lat || pos.lon < west.lon
+            pos.lat > bbox.upper_right.lat
+                || pos.lon > bbox.upper_right.lon
+                || pos.lat < bbox.lower_left.lat
+                || pos.lon < bbox.lower_left.lon
         } else {
             false
         }
