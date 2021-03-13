@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 cfg-if = "1.0.0"
 console_log = { version = "0.2.0", features = ["color"] }
-leaflet = "0.1.2"
+leaflet = { git = "https://github.com/torhovland/leaflet-rs.git" }
 log = "0.4.14"
 quick-xml = { version = "0.22.0", features = ["serialize"] }
 rand = "0.8.3"

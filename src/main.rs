@@ -18,6 +18,7 @@ pub struct Model {
 
 enum Msg {
     SetMap((Map, LayerGroup)),
+    InvalidateMapSize,
     OsmFetched(fetch::Result<String>),
     RandomWalk,
 }
@@ -54,13 +55,19 @@ async fn send_osm_request() -> fetch::Result<String> {
         .await
 }
 
-fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
+fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::SetMap((map, position_layer_group)) => {
             model.map = Some(map);
             model.position_layer_group = Some(position_layer_group);
             map::set_view(&model);
             map::render_topology(&model);
+        }
+
+        Msg::InvalidateMapSize => {
+            if let Some(map) = &model.map {
+                map.invalidateSize(true)
+            };
         }
 
         Msg::OsmFetched(Ok(response_data)) => {
@@ -80,7 +87,11 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
                 let bearing = rng.gen_range(0.0..360.0);
                 let distance = rng.gen_range(0.0..5.0);
                 model.position = Some(destination(pos, bearing, distance));
+                map::set_view(&model);
                 map::render_position(&model);
+
+                // Make sure the map is centered on our position even if the size of the map has changed
+                orders.after_next_render(|_| Msg::InvalidateMapSize);
             }
         }
     }

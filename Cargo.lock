@@ -304,8 +304,7 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 [[package]]
 name = "leaflet"
 version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "581f9082e4f00b319d718efc5601504f337cb20c48b4003657ad234f409e42e9"
+source = "git+https://github.com/torhovland/leaflet-rs.git#8108609454f954ddc854ea73824b5ecd28f2c0c3"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
