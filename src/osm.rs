@@ -59,4 +59,12 @@ impl OsmWay {
             .map(move |nd| osm.node(&nd.node_ref))
             .collect()
     }
+
+    pub fn start<'a>(&'a self, osm: &'a OsmDocument) -> Option<&OsmNode> {
+        self.points(osm).first().copied()
+    }
+
+    pub fn end<'a>(&'a self, osm: &'a OsmDocument) -> Option<&OsmNode> {
+        self.points(osm).last().copied()
+    }
 }

@@ -91,7 +91,7 @@ impl Coord {
 }
 
 impl OsmNode {
-    fn distance(self: &OsmNode, coord: &Coord) -> f64 {
+    pub fn distance(self: &OsmNode, coord: &Coord) -> f64 {
         distance(&self.into(), coord)
     }
 }

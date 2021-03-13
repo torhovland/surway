@@ -67,7 +67,7 @@ pub fn render_position(model: &Model) {
                 .expect("Unable to serialize circle options"),
         ));
 
-        if let Some(nearest) = model.nearest_way() {
+        if let Some(nearest) = model.find_nearest_way() {
             position_layer_group.addLayer(&Polyline::new_with_options(
                 nearest
                     .points(&model.osm)
@@ -83,7 +83,7 @@ pub fn render_position(model: &Model) {
             ));
         }
 
-        for (destination, _, _) in model.nearest_point_on_each_way().iter() {
+        for (destination, _, _) in model.find_nearest_point_on_each_way().iter() {
             position_layer_group.addLayer(&Polyline::new_with_options(
                 vec![position, destination]
                     .into_iter()

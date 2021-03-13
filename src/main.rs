@@ -98,28 +98,52 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 }
 
 fn view(model: &Model) -> Node<Msg> {
-    div![
-        div![id!["map"]],
-        div![model.osm.ways.iter().map(|way| view_way(&model, way))],
-    ]
+    div![C!["content"], div![id!["map"]], view_way(&model),]
 }
 
-fn view_way(model: &Model, way: &OsmWay) -> Node<Msg> {
-    div![
-        h2![&way.id],
-        match &model.position {
-            Some(pos) => {
-                div![format!("Distance = {}", way.distance(&pos, &model.osm))]
-            }
-            None => {
-                div![]
-            }
-        },
-        ul![way
-            .tags
-            .iter()
-            .map(|tag| li![format!("{} = {}", tag.k, tag.v)])],
-    ]
+fn view_way(model: &Model) -> Node<Msg> {
+    match model.find_nearest_way() {
+        Some(way) => {
+            div![
+                C!["way-info"],
+                ul![way
+                    .tags
+                    .iter()
+                    .map(|tag| li![format!("{} = {}", tag.k, tag.v)])],
+                match &model.position {
+                    Some(pos) => {
+                        div![
+                            div![format!(
+                                "Distance away = {} m",
+                                way.distance(&pos, &model.osm).round()
+                            )],
+                            match (way.start(&model.osm), way.end(&model.osm)) {
+                                (Some(start), Some(end)) => {
+                                    div![
+                                        div![format!(
+                                            "Distance to start = {} m",
+                                            start.distance(&pos).round()
+                                        )],
+                                        div![format!(
+                                            "Distance to end = {} m",
+                                            end.distance(&pos).round()
+                                        )]
+                                    ]
+                                }
+                                _ => {
+                                    div![]
+                                }
+                            }
+                        ]
+                    }
+                    None => {
+                        div![]
+                    }
+                },
+            ]
+        }
+        None => div![],
+    }
 }
 
 cfg_if! {
@@ -139,7 +163,7 @@ fn main() {
 }
 
 impl Model {
-    fn nearest_point_on_each_way(&self) -> Vec<(Coord, f64, &OsmWay)> {
+    fn find_nearest_point_on_each_way(&self) -> Vec<(Coord, f64, &OsmWay)> {
         match &self.position {
             None => vec![],
             Some(pos) => self
@@ -165,8 +189,8 @@ impl Model {
         }
     }
 
-    fn nearest_way(&self) -> Option<&OsmWay> {
-        let nearest_points = self.nearest_point_on_each_way();
+    fn find_nearest_way(&self) -> Option<&OsmWay> {
+        let nearest_points = self.find_nearest_point_on_each_way();
 
         let (_, _, way) = nearest_points.iter().min_by(|(_, x, _), (_, y, _)| {
             x.partial_cmp(y).expect("Could not compare distances")
