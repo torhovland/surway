@@ -11,13 +11,17 @@ mod osm;
 
 pub struct Model {
     map: Option<Map>,
+    topology_layer_group: Option<LayerGroup>,
     position_layer_group: Option<LayerGroup>,
     osm: OsmDocument,
     position: Option<Coord>,
+    osm_chunk_position: Option<Coord>,
+    osm_chunk_radius: f64,
+    osm_chunk_trigger_factor: f64,
 }
 
 enum Msg {
-    SetMap((Map, LayerGroup)),
+    SetMap((Map, LayerGroup, LayerGroup)),
     InvalidateMapSize,
     OsmFetched(fetch::Result<String>),
     RandomWalk,
@@ -29,17 +33,24 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         .perform_cmd(async { Msg::OsmFetched(send_osm_request().await) });
 
     if url.search().contains_key("random_walk") {
-        orders.stream(streams::interval(100, || Msg::RandomWalk));
+        orders.stream(streams::interval(1000, || Msg::RandomWalk));
     }
 
     Model {
         map: None,
+        topology_layer_group: None,
         position_layer_group: None,
         osm: OsmDocument::new(),
         position: Some(Coord {
             lat: 63.4015,
             lon: 10.2935,
         }),
+        osm_chunk_position: Some(Coord {
+            lat: 63.4015,
+            lon: 10.2935,
+        }),
+        osm_chunk_radius: 100.0,
+        osm_chunk_trigger_factor: 0.5,
     }
 }
 
@@ -57,8 +68,9 @@ async fn send_osm_request() -> fetch::Result<String> {
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
-        Msg::SetMap((map, position_layer_group)) => {
+        Msg::SetMap((map, topology_layer_group, position_layer_group)) => {
             model.map = Some(map);
+            model.topology_layer_group = Some(topology_layer_group);
             model.position_layer_group = Some(position_layer_group);
             map::set_view(&model);
             map::render_topology(&model);
@@ -74,6 +86,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.osm = quick_xml::de::from_str(&response_data)
                 .expect("Unable to deserialize the OSM data");
 
+            log!("Rendering a new OSM topology.");
             map::render_topology(&model);
         }
 
@@ -85,10 +98,16 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             if let Some(pos) = &model.position {
                 let mut rng = thread_rng();
                 let bearing = rng.gen_range(0.0..360.0);
-                let distance = rng.gen_range(0.0..5.0);
+                let distance = rng.gen_range(0.0..50.0);
                 model.position = Some(destination(pos, bearing, distance));
-                map::set_view(&model);
+                map::pan_to_position(&model);
                 map::render_position(&model);
+
+                if model.is_outside_osm_trigger_box() {
+                    log!("Outside OSM trigger box. Initiating download.");
+                    model.osm_chunk_position = model.position;
+                    map::render_topology(&model);
+                }
 
                 // Make sure the map is centered on our position even if the size of the map has changed
                 orders.after_next_render(|_| Msg::InvalidateMapSize);
@@ -197,5 +216,19 @@ impl Model {
         })?;
 
         Some(way)
+    }
+
+    fn is_outside_osm_trigger_box(&self) -> bool {
+        if let (Some(pos), Some(chunk_pos)) = (&self.position, &self.osm_chunk_position) {
+            let radius = self.osm_chunk_radius * self.osm_chunk_trigger_factor;
+            let north = destination(chunk_pos, 0.0, radius);
+            let east = destination(chunk_pos, 90.0, radius);
+            let south = destination(chunk_pos, 180.0, radius);
+            let west = destination(chunk_pos, 270.0, radius);
+
+            pos.lat > north.lat || pos.lon > east.lon || pos.lat < south.lat || pos.lon < west.lon
+        } else {
+            false
+        }
     }
 }

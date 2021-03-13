@@ -2,7 +2,7 @@ use crate::osm::{OsmDocument, OsmNode, OsmWay};
 
 const R: f64 = 6371008.8; // mean Earth radius
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Coord {
     pub lat: f64,
     pub lon: f64,
@@ -72,9 +72,9 @@ pub fn nearest_point(c1: &Coord, c2: &Coord, c3: &Coord) -> Coord {
     let along_track_distance = along_track_distance(c1, c2, c3);
 
     if along_track_distance < 0.0 {
-        c1.clone()
+        *c1
     } else if along_track_distance > distance(c1, c2) {
-        c2.clone()
+        *c2
     } else {
         destination(c1, bearing(c1, c2), along_track_distance)
     }
