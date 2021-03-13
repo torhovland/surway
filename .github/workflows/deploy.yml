@@ -3,13 +3,25 @@ on: push
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    container: torhovland/rust-trunk:0.9.2
+    container: rust:1.50-slim
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Update apt
+        run: apt-get update
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      
+      - name: Install npm
+        run: apt-get install npm
+
+      - name: Install npm packages
+        run: npm install
+
       - name: Build
-        run: trunk --config Trunk-release.toml build
+        run: npm run build
 
       - name: Deploy to GitHub Pages
         if: success()
@@ -19,3 +31,5 @@ jobs:
           fqdn: surway.hovland.xyz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
