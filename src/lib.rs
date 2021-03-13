@@ -1,79 +1,15 @@
-use cfg_if::cfg_if;
-use geo::{destination, BoundingBox, Coord};
-use leaflet::{LayerGroup, Map};
-use log::{error, info};
-use osm::{OsmDocument, OsmWay};
-use rand::prelude::*;
-use seed::{fetch::StatusCategory, prelude::*, *};
-use serde::Deserialize;
-
-mod geo;
-mod map;
-mod osm;
-
 use wasm_bindgen::prelude::*;
+use web_sys::console;
 
-#[wasm_bindgen(inline_js = "export function name() {
-    return 'Rust';
-};
+// When the `wee_alloc` feature is enabled, this uses `wee_alloc` as the global
+// allocator.
+//
+// If you don't want to use `wee_alloc`, you can safely delete this.
+#[cfg(feature = "wee_alloc")]
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-export class MyClass {
-    constructor() {
-        this._number = 42;
-    }
-
-    get number() {
-        return this._number;
-    }
-
-    set number(n) {
-        return this._number = n;
-    }
-
-    render() {
-        return `My number is: ${this.number}`;
-    }
-};
-
-function sleep(ms) {
-    var unixtime_ms = new Date().getTime();
-    while(new Date().getTime() < unixtime_ms + ms) {}
-}
-
-export class GeoLocator {
-    get latitude() {
-        return this._latitude;
-    }
-
-    get longitude() {
-        return this._longitude;
-    }
-
-    locate() {
-        hello_rust();
-        
-        var success = (function (position) {
-            this._latitude = position.coords.latitude;
-            this._longitude = position.coords.longitude;
-            console.log(`Latitude: ${this._latitude} °, Longitude: ${this._longitude} °`);
-          }).bind(this);
-    
-          function error() {
-            console.log('Unable to retrieve your location');
-          }
-    
-          if (!navigator.geolocation) {
-            console.log('Geolocation is not supported by your browser');
-          } else {
-            console.log('Locating…');
-            navigator.geolocation.getCurrentPosition(success, error);
-          }    
-
-        return 'foo';
-    }    
-};
-")]
-
+#[wasm_bindgen(module = "/js/defined-in-js.js")]
 extern "C" {
     type MyClass;
     type GeoLocator;
@@ -92,9 +28,24 @@ extern "C" {
 }
 
 #[wasm_bindgen]
-pub fn hello_rust() {
-    info!("Hello from Rust!");
+pub fn greet(name: &str) {
+    console::log_1(&JsValue::from_str(&format!("Hello, {}!", name)));
 }
+
+use cfg_if::cfg_if;
+use geo::{destination, BoundingBox, Coord};
+use leaflet::{LayerGroup, Map};
+use log::{error, info};
+use osm::{OsmDocument, OsmWay};
+use rand::prelude::*;
+use seed::{fetch::StatusCategory, prelude::*, *};
+use serde::Deserialize;
+
+mod geo;
+mod map;
+mod osm;
+
+use wasm_bindgen::prelude::*;
 
 pub struct Model {
     map: Option<Map>,
@@ -341,20 +292,23 @@ fn view_way(model: &Model) -> Node<Msg> {
     }
 }
 
-cfg_if! {
-    if #[cfg(debug_assertions)] {
-        fn init_log() {
-            use log::Level;
-            console_log::init_with_level(Level::Trace).expect("error initializing log");
-        }
-    } else {
-        fn init_log() {}
-    }
-}
+// This is like the `main` function, except for JavaScript.
+#[wasm_bindgen(start)]
+pub fn main_js() -> Result<(), JsValue> {
+    // This provides better error messages in debug mode.
+    // It's disabled in release mode so it doesn't bloat up the file size.
+    #[cfg(feature = "console_error_panic_hook")]
+    console_error_panic_hook::set_once();
 
-fn main() {
-    init_log();
+    // Your code goes here!
+    console::log_1(&JsValue::from_str("Hello world!"));
+
+    let geo_locator = GeoLocator::new();
+    geo_locator.locate();
+
     App::start("app", init, update, view);
+
+    Ok(())
 }
 
 impl Model {

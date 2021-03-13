@@ -1,8 +1,28 @@
 [package]
 name = "surway"
+description = "An app for reviewing OpenStreetMap tags on ways and nodes."
 version = "0.1.0"
 authors = ["Tor Hovland <tor.hovland@bekk.no>"]
+categories = ["wasm"]
+readme = "README.md"
 edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = "s"
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev]
+opt-level = 1
+
+[features]
+default = ["console_error_panic_hook", "wee_alloc"]
 
 [dependencies]
 cfg-if = "1.0.0"
@@ -15,16 +35,25 @@ seed = "0.8.0"
 serde = "1.0.124"
 web-sys = { version = "0.3.48", features = ["Geolocation", "Navigator"] }
 
+# The `wasm-bindgen` crate provides the bare minimum functionality needed
+# to interact with JavaScript.
+wasm-bindgen = "0.2.71"
+
+# `wee_alloc` is a tiny allocator for wasm that is only ~1K in code size
+# compared to the default allocator's ~10K. However, it is slower than the default
+# allocator, so it's not enabled by default.
+wee_alloc = { version = "0.4.5", optional = true }
+
+# The `console_error_panic_hook` crate provides better debugging of panics by
+# logging them with `console.error`. This is great for development, but requires
+# all the `std::fmt` and `std::panicking` infrastructure, so it's only enabled
+# in debug mode.
+console_error_panic_hook = { version = "0.1.6", optional = true }
+
+# These crates are used for running unit tests.
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
-
-[profile.release]
-lto = true
-codegen-units = 1
-opt-level = "s"
-
-[profile.dev.package."*"]
-opt-level = 3
-
-[profile.dev]
-opt-level = 1
+wasm-bindgen-test = "0.3.21"
+futures = "0.3.13"
+js-sys = "0.3.48"
+wasm-bindgen-futures = "0.4.21"
