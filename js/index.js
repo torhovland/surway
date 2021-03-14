@@ -2,7 +2,7 @@ import '../styles/index.scss';
 const rust = import("../pkg/index.js");
 
 rust.then(r => {
-    const [set_latitude, set_longitude] = r.start_seed();
+    const [set_latitude, set_longitude, set_accuracy] = r.start_seed();
     set_latitude(42.0);
 
     r.greet('Hi from index.js');
@@ -13,6 +13,7 @@ rust.then(r => {
 
         set_latitude(crd.latitude);
         set_longitude(crd.longitude);
+        set_accuracy(crd.accuracy);
     }
 
     function error(err) {
@@ -22,7 +23,7 @@ rust.then(r => {
     if (!navigator.geolocation) {
         console.error('Geolocation is not supported by your browser');
     } else {
-        navigator.geolocation.watchPosition(success, error);
+        navigator.geolocation.watchPosition(success, error, { enableHighAccuracy: true });
     }
 
 }).catch(console.error);

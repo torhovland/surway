@@ -58,6 +58,7 @@ pub struct Model {
     position: Option<Coord>,
     latitude: f64,
     longitude: f64,
+    accuracy: f64,
     osm_chunk_position: Option<Coord>,
     osm_chunk_radius: f64,
     osm_chunk_trigger_factor: f64,
@@ -71,6 +72,7 @@ enum Msg {
     Increment,
     SetLatitude(f64),
     SetLongitude(f64),
+    SetAccuracy(f64),
 }
 
 #[derive(Debug, Deserialize)]
@@ -119,6 +121,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         position: Some(position),
         latitude: 0.0,
         longitude: 0.0,
+        accuracy: 100.0,
         osm_chunk_position: Some(position),
         osm_chunk_radius: radius,
         osm_chunk_trigger_factor: 0.8,
@@ -274,6 +277,12 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 handle_new_position(model, orders);
             }
         }
+
+        Msg::SetAccuracy(f) => {
+            info!("Received accuracy: {}", f);
+
+            model.accuracy = f;
+        }
     }
 }
 
@@ -373,8 +382,11 @@ fn create_closures_for_js(app: &App<Msg, Model, Node<Msg>>) -> Box<[JsValue]> {
     let set_longitude = wrap_in_permanent_closure(enc!((app) move |f| {
         app.update(Msg::SetLongitude(f))
     }));
+    let set_accuracy = wrap_in_permanent_closure(enc!((app) move |f| {
+        app.update(Msg::SetAccuracy(f))
+    }));
 
-    vec![set_latitude, set_longitude].into_boxed_slice()
+    vec![set_latitude, set_longitude, set_accuracy].into_boxed_slice()
 }
 
 fn wrap_in_permanent_closure<T>(f: impl FnMut(T) + 'static) -> JsValue

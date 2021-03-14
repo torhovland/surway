@@ -119,8 +119,10 @@ pub fn render_position(model: &Model) {
 
         position_layer_group.addLayer(&Circle::new_with_options(
             &LatLng::from(position),
-            &JsValue::from_serde(&CircleOptions { radius: 3.5 })
-                .expect("Unable to serialize circle options"),
+            &JsValue::from_serde(&CircleOptions {
+                radius: model.accuracy,
+            })
+            .expect("Unable to serialize circle options"),
         ));
 
         if let Some(nearest) = model.find_nearest_way() {
