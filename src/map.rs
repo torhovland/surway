@@ -67,7 +67,7 @@ pub fn render_topology(model: &Model) {
         topology_layer_group.addLayer(&Rectangle::new_with_options(
             &bbox(chunk_position, model.osm_chunk_radius),
             &JsValue::from_serde(&LineOptions {
-                color: "red".into(),
+                color: "purple".into(),
                 weight: 1,
                 fillOpacity: 0.0,
             })
@@ -80,7 +80,7 @@ pub fn render_topology(model: &Model) {
                 model.osm_chunk_radius * model.osm_chunk_trigger_factor,
             ),
             &JsValue::from_serde(&LineOptions {
-                color: "orange".into(),
+                color: "red".into(),
                 weight: 1,
                 fillOpacity: 0.0,
             })
@@ -148,7 +148,7 @@ pub fn render_position(model: &Model) {
                     .map(JsValue::from)
                     .collect(),
                 &JsValue::from_serde(&LineOptions {
-                    color: "purple".into(),
+                    color: "orange".into(),
                     weight: 1,
                     fillOpacity: 0.0,
                 })
