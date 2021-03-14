@@ -96,7 +96,7 @@ pub fn render_topology(model: &Model) {
                     .collect(),
                 &JsValue::from_serde(&LineOptions {
                     color: "green".into(),
-                    weight: 2,
+                    weight: 3,
                     fillOpacity: 0.0,
                 })
                 .expect("Unable to serialize polyline options"),
@@ -133,23 +133,7 @@ pub fn render_position(model: &Model) {
                     .collect(),
                 &JsValue::from_serde(&LineOptions {
                     color: "blue".into(),
-                    weight: 2,
-                    fillOpacity: 0.0,
-                })
-                .expect("Unable to serialize polyline options"),
-            ));
-        }
-
-        for (destination, _, _) in model.find_nearest_point_on_each_way().iter() {
-            position_layer_group.addLayer(&Polyline::new_with_options(
-                vec![position, destination]
-                    .into_iter()
-                    .map(LatLng::from)
-                    .map(JsValue::from)
-                    .collect(),
-                &JsValue::from_serde(&LineOptions {
-                    color: "orange".into(),
-                    weight: 1,
+                    weight: 4,
                     fillOpacity: 0.0,
                 })
                 .expect("Unable to serialize polyline options"),
