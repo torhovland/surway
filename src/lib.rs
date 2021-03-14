@@ -196,26 +196,27 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
         Msg::RandomWalk => {
             if let Some(pos) = &model.position {
+                let bbox = pos.bbox(model.osm_chunk_radius);
+
                 let mut rng = thread_rng();
                 let bearing = rng.gen_range(0.0..360.0);
                 let distance = rng.gen_range(0.0..200.0);
+                model.position = Some(destination(pos, bearing, distance));
+
                 map::pan_to_position(&model);
                 map::render_position(&model);
 
                 if model.is_outside_osm_trigger_box() {
                     info!("Outside OSM trigger box. Initiating download.");
                     model.osm_chunk_position = model.position;
-                    map::render_topology(&model);
+                    // map::render_topology(&model);
 
-                    let bbox = pos.bbox(model.osm_chunk_radius);
                     orders
                         .perform_cmd(async move { Msg::OsmFetched(send_osm_request(&bbox).await) });
                 }
 
                 // Make sure the map is centered on our position even if the size of the map has changed
                 orders.after_next_render(|_| Msg::InvalidateMapSize);
-
-                model.position = Some(destination(pos, bearing, distance));
             }
         }
 
