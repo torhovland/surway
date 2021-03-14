@@ -6,8 +6,15 @@ img.leaflet-tile {
     filter: saturate(25%);
 }
 
+#app {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+}
+
 .content {
-    height: 100vh;
+    height: 100%;
     display: flex;
     flex-direction: column;
     font-family: "Noto Sans JP", sans-serif;
