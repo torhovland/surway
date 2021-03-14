@@ -1,3 +1,4 @@
+use enclose::enc;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
 
@@ -9,8 +10,10 @@ use web_sys::console;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-#[wasm_bindgen(module = "/js/defined-in-js.js")]
+#[wasm_bindgen(module = "/js/api.js")]
 extern "C" {
+    #[wasm_bindgen(method)]
+    // fn start_geolocator();
     type MyClass;
     type GeoLocator;
 
@@ -53,6 +56,8 @@ pub struct Model {
     position_layer_group: Option<LayerGroup>,
     osm: OsmDocument,
     position: Option<Coord>,
+    latitude: f64,
+    longitude: f64,
     osm_chunk_position: Option<Coord>,
     osm_chunk_radius: f64,
     osm_chunk_trigger_factor: f64,
@@ -64,6 +69,8 @@ enum Msg {
     OsmFetched(fetch::Result<String>),
     RandomWalk,
     Increment,
+    SetLatitude(f64),
+    SetLongitude(f64),
 }
 
 #[derive(Debug, Deserialize)]
@@ -110,6 +117,8 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         position_layer_group: None,
         osm: OsmDocument::new(),
         position: Some(position),
+        latitude: 0.0,
+        longitude: 0.0,
         osm_chunk_position: Some(position),
         osm_chunk_radius: radius,
         osm_chunk_trigger_factor: 0.8,
@@ -161,6 +170,25 @@ async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
     //     info!("Retrying...");
 }
 
+fn handle_new_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
+    if let Some(pos) = model.position {
+        map::pan_to_position(&model);
+        map::render_position(&model);
+
+        if model.is_outside_osm_trigger_box() {
+            info!("Outside OSM trigger box. Initiating download.");
+            model.osm_chunk_position = model.position;
+            // map::render_topology(&model);
+
+            let bbox = pos.bbox(model.osm_chunk_radius);
+            orders.perform_cmd(async move { Msg::OsmFetched(send_osm_request(&bbox).await) });
+        }
+
+        // Make sure the map is centered on our position even if the size of the map has changed
+        orders.after_next_render(|_| Msg::InvalidateMapSize);
+    }
+}
+
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::SetMap((map, topology_layer_group, position_layer_group)) => {
@@ -191,27 +219,12 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
         Msg::RandomWalk => {
             if let Some(pos) = &model.position {
-                let bbox = pos.bbox(model.osm_chunk_radius);
-
                 let mut rng = thread_rng();
                 let bearing = rng.gen_range(0.0..360.0);
                 let distance = rng.gen_range(0.0..200.0);
                 model.position = Some(destination(pos, bearing, distance));
 
-                map::pan_to_position(&model);
-                map::render_position(&model);
-
-                if model.is_outside_osm_trigger_box() {
-                    info!("Outside OSM trigger box. Initiating download.");
-                    model.osm_chunk_position = model.position;
-                    // map::render_topology(&model);
-
-                    orders
-                        .perform_cmd(async move { Msg::OsmFetched(send_osm_request(&bbox).await) });
-                }
-
-                // Make sure the map is centered on our position even if the size of the map has changed
-                orders.after_next_render(|_| Msg::InvalidateMapSize);
+                handle_new_position(model, orders);
             }
         }
 
@@ -230,6 +243,36 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             //     .get_current_position(geo_callback_function.as_ref().unchecked_ref())
             //     .expect("Unable to get position.");
             // geo_callback_function.forget();
+        }
+
+        Msg::SetLatitude(f) => {
+            info!("Received latitude: {}", f);
+
+            model.latitude = f;
+
+            if let Some(pos) = model.position {
+                model.position = Some(Coord {
+                    lat: f,
+                    lon: pos.lon,
+                });
+
+                handle_new_position(model, orders);
+            }
+        }
+
+        Msg::SetLongitude(f) => {
+            info!("Received longitude: {}", f);
+
+            model.longitude = f;
+
+            if let Some(pos) = model.position {
+                model.position = Some(Coord {
+                    lat: pos.lat,
+                    lon: f,
+                });
+
+                handle_new_position(model, orders);
+            }
         }
     }
 }
@@ -288,9 +331,25 @@ fn view_way(model: &Model) -> Node<Msg> {
     }
 }
 
+cfg_if! {
+    if #[cfg(debug_assertions)] {
+        fn init_log() {
+            use log::Level;
+            console_log::init_with_level(Level::Trace).expect("error initializing log");
+        }
+    } else {
+        fn init_log() {}
+    }
+}
+
 // This is like the `main` function, except for JavaScript.
 #[wasm_bindgen(start)]
 pub fn main_js() -> Result<(), JsValue> {
+    Ok(())
+}
+
+#[wasm_bindgen]
+pub fn start_seed() -> Box<[JsValue]> {
     // This provides better error messages in debug mode.
     // It's disabled in release mode so it doesn't bloat up the file size.
     #[cfg(feature = "console_error_panic_hook")]
@@ -302,9 +361,34 @@ pub fn main_js() -> Result<(), JsValue> {
     let geo_locator = GeoLocator::new();
     geo_locator.locate();
 
-    App::start("app", init, update, view);
+    init_log();
+    let app = App::start("app", init, update, view);
+    create_closures_for_js(&app)
+}
 
-    Ok(())
+fn create_closures_for_js(app: &App<Msg, Model, Node<Msg>>) -> Box<[JsValue]> {
+    let set_latitude = wrap_in_permanent_closure(enc!((app) move |f| {
+        app.update(Msg::SetLatitude(f))
+    }));
+    let set_longitude = wrap_in_permanent_closure(enc!((app) move |f| {
+        app.update(Msg::SetLongitude(f))
+    }));
+
+    vec![set_latitude, set_longitude].into_boxed_slice()
+}
+
+fn wrap_in_permanent_closure<T>(f: impl FnMut(T) + 'static) -> JsValue
+where
+    T: wasm_bindgen::convert::FromWasmAbi + 'static,
+{
+    // `Closure::new` isn't in `stable` Rust (yet) - it's a custom implementation from Seed.
+    // If you need more flexibility, use `Closure::wrap`.
+    let closure = Closure::new(f);
+    let closure_as_js_value = closure.as_ref().clone();
+    // `forget` leaks `Closure` - we should use it only when
+    // we want to call given `Closure` more than once.
+    closure.forget();
+    closure_as_js_value
 }
 
 impl Model {
