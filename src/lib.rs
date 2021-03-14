@@ -128,25 +128,20 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
 //         .await
 // }
 
-fn get_osm_query(bbox: &BoundingBox) -> String {
+fn get_osm_request_url(bbox: &BoundingBox) -> String {
     format!(
-        "way({},{},{},{})[\"highway\"]; (._;>;); out;",
-        bbox.lower_left.lat, bbox.lower_left.lon, bbox.upper_right.lat, bbox.upper_right.lon
+        "https://overpass-api.de/api/interpreter?data=[bbox];way[highway];(._;>;);out;&bbox={},{},{},{}",
+        bbox.lower_left.lon, bbox.lower_left.lat, bbox.upper_right.lon, bbox.upper_right.lat
     )
 }
 
 async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
-    let url = "https://overpass-api.de/api/interpreter";
-    let query = get_osm_query(bbox);
-    info!("Fetching query {}", query);
+    // https://overpass-api.de/api/interpreter?data=[bbox];way[highway];(._;>;);out;&bbox=10.29149140339605,63.40060067963628,10.295508596604192,63.402399320363706
+    // https://overpass-api.de/api/interpreter?data=[bbox];way[highway];(._;>;);out;&bbox=10.29,63.40,10.30,63.42
+    let url = get_osm_request_url(bbox);
+    info!("Fetching {}", url);
 
-    let response = Request::new(url)
-        .method(Method::Post)
-        //.header(Header::custom("Accept-Encoding", "gzip"))
-        .text(query)
-        .fetch()
-        .await
-        .expect("OSM request failed");
+    let response = Request::new(url).fetch().await.expect("OSM request failed");
     let status = response.status();
     let body = response.text().await.expect("Unable to get response text");
 
