@@ -63,7 +63,7 @@ impl Model {
                 || pos.lat < bbox.lower_left.lat
                 || pos.lon < bbox.lower_left.lon
         } else {
-            false
+            true
         }
     }
 }
