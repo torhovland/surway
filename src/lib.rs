@@ -50,6 +50,13 @@ mod osm;
 
 use wasm_bindgen::prelude::*;
 
+#[derive(Debug, Deserialize)]
+struct GeoLocation {
+    latitude: f64,
+    longitude: f64,
+    //accuracy: f64,
+}
+
 pub struct Model {
     map: Option<Map>,
     topology_layer_group: Option<LayerGroup>,
@@ -73,6 +80,8 @@ enum Msg {
     SetLatitude(f64),
     SetLongitude(f64),
     SetAccuracy(f64),
+    SetPosition(JsValue),
+    SetCoords(JsValue),
 }
 
 #[derive(Debug, Deserialize)]
@@ -121,7 +130,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         position: Some(position),
         latitude: 0.0,
         longitude: 0.0,
-        accuracy: 100.0,
+        accuracy: 10.0,
         osm_chunk_position: Some(position),
         osm_chunk_radius: radius,
         osm_chunk_trigger_factor: 0.8,
@@ -224,7 +233,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             if let Some(pos) = &model.position {
                 let mut rng = thread_rng();
                 let bearing = rng.gen_range(0.0..360.0);
-                let distance = rng.gen_range(0.0..200.0);
+                let distance = rng.gen_range(0.0..100.0);
                 model.position = Some(destination(pos, bearing, distance));
 
                 handle_new_position(model, orders);
@@ -251,48 +260,63 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::SetLatitude(f) => {
             info!("Received latitude: {}", f);
 
-            model.latitude = f;
+            // model.latitude = f;
 
-            if let Some(pos) = model.position {
-                model.position = Some(Coord {
-                    lat: f,
-                    lon: pos.lon,
-                });
+            // if let Some(pos) = model.position {
+            //     model.position = Some(Coord {
+            //         lat: f,
+            //         lon: pos.lon,
+            //     });
 
-                handle_new_position(model, orders);
-            }
+            //     handle_new_position(model, orders);
+            // }
         }
 
         Msg::SetLongitude(f) => {
             info!("Received longitude: {}", f);
 
-            model.longitude = f;
+            // model.longitude = f;
 
-            if let Some(pos) = model.position {
-                model.position = Some(Coord {
-                    lat: pos.lat,
-                    lon: f,
-                });
+            // if let Some(pos) = model.position {
+            //     model.position = Some(Coord {
+            //         lat: pos.lat,
+            //         lon: f,
+            //     });
 
-                handle_new_position(model, orders);
-            }
+            //     handle_new_position(model, orders);
+            // }
         }
 
         Msg::SetAccuracy(f) => {
             info!("Received accuracy: {}", f);
 
-            model.accuracy = f;
+            //model.accuracy = f;
+        }
+
+        Msg::SetPosition(js) => {
+            let position: GeoLocation = js
+                .into_serde()
+                .expect("Unable to deserialize GeoLocation object.");
+
+            info!("Received position: {:?}", position);
+
+            //model.accuracy = f;
+        }
+
+        Msg::SetCoords(js) => {
+            let position: GeoLocation = js
+                .into_serde()
+                .expect("Unable to deserialize GeoLocation object.");
+
+            info!("Received coords: {:?}", position);
+
+            //model.accuracy = f;
         }
     }
 }
 
 fn view(model: &Model) -> Node<Msg> {
-    div![
-        C!["content"],
-        div![id!["map"]],
-        button!["Locate!", ev(Ev::Click, |_| Msg::Increment),],
-        view_way(&model),
-    ]
+    div![C!["content"], div![id!["map"]], view_way(&model),]
 }
 
 fn view_way(model: &Model) -> Node<Msg> {
@@ -385,8 +409,21 @@ fn create_closures_for_js(app: &App<Msg, Model, Node<Msg>>) -> Box<[JsValue]> {
     let set_accuracy = wrap_in_permanent_closure(enc!((app) move |f| {
         app.update(Msg::SetAccuracy(f))
     }));
+    let set_position = wrap_in_permanent_closure(enc!((app) move |f| {
+        app.update(Msg::SetPosition(f))
+    }));
+    let set_coords = wrap_in_permanent_closure(enc!((app) move |f| {
+        app.update(Msg::SetCoords(f))
+    }));
 
-    vec![set_latitude, set_longitude, set_accuracy].into_boxed_slice()
+    vec![
+        set_latitude,
+        set_longitude,
+        set_accuracy,
+        set_position,
+        set_coords,
+    ]
+    .into_boxed_slice()
 }
 
 fn wrap_in_permanent_closure<T>(f: impl FnMut(T) + 'static) -> JsValue

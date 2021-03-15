@@ -2,7 +2,7 @@ import '../styles/index.scss';
 const rust = import("../pkg/index.js");
 
 rust.then(r => {
-    const [set_latitude, set_longitude, set_accuracy] = r.start_seed();
+    const [set_latitude, set_longitude, set_accuracy, set_position, set_coords] = r.start_seed();
     set_latitude(42.0);
 
     r.greet('Hi from index.js');
@@ -14,6 +14,10 @@ rust.then(r => {
         set_latitude(crd.latitude);
         set_longitude(crd.longitude);
         set_accuracy(crd.accuracy);
+
+        const position = { latitude: crd.latitude, longitude: crd.longitude };
+        set_position(position);
+        set_coords(crd);
     }
 
     function error(err) {
