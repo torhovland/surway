@@ -12,6 +12,7 @@ mod map;
 mod osm;
 
 use wasm_bindgen::prelude::*;
+use web_sys::console::info;
 
 #[wasm_bindgen(inline_js = "export function name() {
     return 'Rust';
@@ -115,25 +116,41 @@ enum Msg {
     Increment,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct GeolocationCoordinates {
-    pub latitude: f64,
-    pub longitude: f64,
-}
+// #[derive(Debug, Deserialize)]
+// pub struct GeolocationCoordinates {
+//     pub latitude: f64,
+//     pub longitude: f64,
+// }
 
-#[derive(Debug, Deserialize)]
-pub struct GeolocationPosition {
-    pub coords: GeolocationCoordinates,
+// #[derive(Debug, Deserialize)]
+// pub struct GeolocationPosition {
+//     pub coords: GeolocationCoordinates,
+// }
+
+#[wasm_bindgen]
+extern "C" {
+    type GeolocationCoordinates;
+
+    #[wasm_bindgen(method, getter)]
+    fn latitude(this: &GeolocationCoordinates) -> f64;
+
+    #[wasm_bindgen(method, getter)]
+    fn longitude(this: &GeolocationCoordinates) -> f64;
+
+    type GeolocationPosition;
+
+    #[wasm_bindgen(method, getter)]
+    fn coords(this: &GeolocationPosition) -> GeolocationCoordinates;
 }
 
 fn geo_callback(position: JsValue) {
-    // let pos: GeolocationPosition =
-    //     JsValue::into_serde(&position).expect("Unable to deserialize GeolocationPosition.");
-    //info!("Geo callback: {:?}", position);
-    unsafe {
-        let s = js_sys::JSON::stringify(&position).expect("Unable to stringify JSON");
-        info!("Geo callback: {:?}", s);
-    }
+    let pos = JsCast::unchecked_into::<GeolocationPosition>(position);
+    let coords = pos.coords();
+    info!(
+        "Latitude: {}. Longitude: {}.",
+        coords.latitude(),
+        coords.longitude()
+    );
 }
 
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
@@ -269,20 +286,15 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
 
         Msg::Increment => {
-            let geo_locator = GeoLocator::new();
-            geo_locator.locate();
-            info!("{}", &geo_locator.latitude());
-            info!("{}", &geo_locator.longitude());
-
-            // let window = web_sys::window().expect("Unable to get browser window.");
-            // let navigator = window.navigator();
-            // let geolocation = navigator.geolocation().expect("Unable to get geolocation.");
-            // let geo_callback_function =
-            //     Closure::wrap(Box::new(geo_callback) as Box<dyn FnMut(JsValue)>);
-            // geolocation
-            //     .get_current_position(geo_callback_function.as_ref().unchecked_ref())
-            //     .expect("Unable to get position.");
-            // geo_callback_function.forget();
+            let window = web_sys::window().expect("Unable to get browser window.");
+            let navigator = window.navigator();
+            let geolocation = navigator.geolocation().expect("Unable to get geolocation.");
+            let geo_callback_function =
+                Closure::wrap(Box::new(geo_callback) as Box<dyn FnMut(JsValue)>);
+            geolocation
+                .get_current_position(geo_callback_function.as_ref().unchecked_ref())
+                .expect("Unable to get position.");
+            geo_callback_function.forget();
         }
     }
 }
