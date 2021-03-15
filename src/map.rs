@@ -144,22 +144,6 @@ pub fn render_position(model: &Model) {
             ));
         }
 
-        for (destination, _, _) in model.find_nearest_point_on_each_way().iter() {
-            position_layer_group.addLayer(&Polyline::new_with_options(
-                vec![position, destination]
-                    .into_iter()
-                    .map(LatLng::from)
-                    .map(JsValue::from)
-                    .collect(),
-                &JsValue::from_serde(&LineOptions {
-                    color: "purple".into(),
-                    weight: 1,
-                    fillOpacity: 0.0,
-                })
-                .expect("Unable to serialize polyline options"),
-            ));
-        }
-
         topology_layer_group.addTo(&map);
         position_layer_group.addTo(&map);
     }
