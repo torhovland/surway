@@ -4,8 +4,10 @@ use crate::{
     Model,
 };
 use leaflet::{Circle, LatLng, LatLngBounds, LayerGroup, Map, Polyline, Rectangle, TileLayer};
+use log::{error, info};
 use seed::prelude::*;
 use serde::{Deserialize, Serialize};
+use web_sys::console::info;
 
 #[derive(Serialize, Deserialize)]
 #[allow(non_snake_case)]
@@ -40,12 +42,14 @@ pub fn init() -> (Map, LayerGroup, LayerGroup) {
 
 pub fn set_view(model: &Model) {
     if let (Some(map), Some(position)) = (&model.map, &model.position) {
+        info!("Setting map view to {:?}.", &position);
         map.setView(&position.into(), 19.0);
     }
 }
 
 pub fn pan_to_position(model: &Model) {
     if let (Some(map), Some(position)) = (&model.map, &model.position) {
+        info!("Panning to {:?}.", &position);
         map.panTo(&position.into());
     }
 }

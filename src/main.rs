@@ -1,170 +1,55 @@
+use bindings::GeolocationPosition;
 use cfg_if::cfg_if;
 use geo::{destination, BoundingBox, Coord};
 use leaflet::{LayerGroup, Map};
 use log::{error, info};
-use osm::{OsmDocument, OsmWay};
+use model::Model;
+use osm::OsmDocument;
 use rand::prelude::*;
 use seed::{fetch::StatusCategory, prelude::*, *};
-use serde::Deserialize;
 
+mod bindings;
 mod geo;
 mod map;
+mod model;
 mod osm;
-
-use wasm_bindgen::prelude::*;
-use web_sys::console::info;
-
-#[wasm_bindgen(inline_js = "export function name() {
-    return 'Rust';
-};
-
-export class MyClass {
-    constructor() {
-        this._number = 42;
-    }
-
-    get number() {
-        return this._number;
-    }
-
-    set number(n) {
-        return this._number = n;
-    }
-
-    render() {
-        return `My number is: ${this.number}`;
-    }
-};
-
-function sleep(ms) {
-    var unixtime_ms = new Date().getTime();
-    while(new Date().getTime() < unixtime_ms + ms) {}
-}
-
-export class GeoLocator {
-    get latitude() {
-        return this._latitude;
-    }
-
-    get longitude() {
-        return this._longitude;
-    }
-
-    locate() {
-        hello_rust();
-        
-        var success = (function (position) {
-            this._latitude = position.coords.latitude;
-            this._longitude = position.coords.longitude;
-            console.log(`Latitude: ${this._latitude} °, Longitude: ${this._longitude} °`);
-          }).bind(this);
-    
-          function error() {
-            console.log('Unable to retrieve your location');
-          }
-    
-          if (!navigator.geolocation) {
-            console.log('Geolocation is not supported by your browser');
-          } else {
-            console.log('Locating…');
-            navigator.geolocation.getCurrentPosition(success, error);
-          }    
-
-        return 'foo';
-    }    
-};
-")]
-
-extern "C" {
-    type MyClass;
-    type GeoLocator;
-
-    #[wasm_bindgen(constructor)]
-    fn new() -> GeoLocator;
-
-    #[wasm_bindgen(method, getter)]
-    fn latitude(this: &GeoLocator) -> f64;
-
-    #[wasm_bindgen(method, getter)]
-    fn longitude(this: &GeoLocator) -> f64;
-
-    #[wasm_bindgen(method)]
-    fn locate(this: &GeoLocator) -> String;
-}
-
-#[wasm_bindgen]
-pub fn hello_rust() {
-    info!("Hello from Rust!");
-}
-
-pub struct Model {
-    map: Option<Map>,
-    topology_layer_group: Option<LayerGroup>,
-    position_layer_group: Option<LayerGroup>,
-    osm: OsmDocument,
-    position: Option<Coord>,
-    osm_chunk_position: Option<Coord>,
-    osm_chunk_radius: f64,
-    osm_chunk_trigger_factor: f64,
-}
 
 enum Msg {
     SetMap((Map, LayerGroup, LayerGroup)),
     InvalidateMapSize,
     OsmFetched(fetch::Result<String>),
+    Position(f64, f64),
     RandomWalk,
     Increment,
 }
 
-// #[derive(Debug, Deserialize)]
-// pub struct GeolocationCoordinates {
-//     pub latitude: f64,
-//     pub longitude: f64,
-// }
-
-// #[derive(Debug, Deserialize)]
-// pub struct GeolocationPosition {
-//     pub coords: GeolocationCoordinates,
-// }
-
-#[wasm_bindgen]
-extern "C" {
-    type GeolocationCoordinates;
-
-    #[wasm_bindgen(method, getter)]
-    fn latitude(this: &GeolocationCoordinates) -> f64;
-
-    #[wasm_bindgen(method, getter)]
-    fn longitude(this: &GeolocationCoordinates) -> f64;
-
-    type GeolocationPosition;
-
-    #[wasm_bindgen(method, getter)]
-    fn coords(this: &GeolocationPosition) -> GeolocationCoordinates;
-}
-
-fn geo_callback(position: JsValue) {
-    let pos = JsCast::unchecked_into::<GeolocationPosition>(position);
-    let coords = pos.coords();
-    info!(
-        "Latitude: {}. Longitude: {}.",
-        coords.latitude(),
-        coords.longitude()
-    );
-}
-
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
-    let position = Coord {
-        lat: 63.4015,
-        lon: 10.2935,
+    let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
+
+    let mut geo_callback = move |position: JsValue| {
+        let pos = JsCast::unchecked_into::<GeolocationPosition>(position);
+        let coords = pos.coords();
+        info!(
+            "Latitude: {}. Longitude: {}.",
+            coords.latitude(),
+            coords.longitude()
+        );
+        app.update(msg_mapper(Msg::Position(
+            coords.latitude(),
+            coords.longitude(),
+        )));
     };
 
-    let radius = 500.0;
-    let bbox = position.bbox(radius);
+    let window = web_sys::window().expect("Unable to get browser window.");
+    let navigator = window.navigator();
+    let geolocation = navigator.geolocation().expect("Unable to get geolocation.");
+    let geo_callback_function = Closure::wrap(Box::new(geo_callback) as Box<dyn FnMut(JsValue)>);
+    geolocation
+        .get_current_position(geo_callback_function.as_ref().unchecked_ref())
+        .expect("Unable to get position.");
+    geo_callback_function.forget();
 
     orders.after_next_render(|_| Msg::SetMap(map::init())); // Cannot initialize Leaflet until the map element has rendered.
-
-    orders.perform_cmd(async move { Msg::OsmFetched(send_osm_request(&bbox).await) });
 
     if url.search().contains_key("random_walk") {
         orders.stream(streams::interval(1000, || Msg::RandomWalk));
@@ -175,24 +60,12 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         topology_layer_group: None,
         position_layer_group: None,
         osm: OsmDocument::new(),
-        position: Some(position),
-        osm_chunk_position: Some(position),
-        osm_chunk_radius: radius,
+        position: None,
+        osm_chunk_position: None,
+        osm_chunk_radius: 500.0,
         osm_chunk_trigger_factor: 0.8,
     }
 }
-
-// fn get_osm_request_url(position: Coord) -> &'static str {
-//     "https://www.openstreetmap.org/api/0.6/map?bbox=10.29072%2C63.39981%2C10.29426%2C63.40265"
-// }
-
-// async fn send_osm_request(bbox: Coord) -> fetch::Result<String> {
-//     fetch(get_osm_request_url(position))
-//         .await?
-//         .check_status()?
-//         .text()
-//         .await
-// }
 
 fn get_osm_query(bbox: &BoundingBox) -> String {
     format!(
@@ -208,7 +81,6 @@ async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
 
     let response = Request::new(url)
         .method(Method::Post)
-        //.header(Header::custom("Accept-Encoding", "gzip"))
         .text(query)
         .fetch()
         .await
@@ -235,6 +107,7 @@ async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::SetMap((map, topology_layer_group, position_layer_group)) => {
+            info!("SetMap");
             model.map = Some(map);
             model.topology_layer_group = Some(topology_layer_group);
             model.position_layer_group = Some(position_layer_group);
@@ -265,38 +138,42 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 let mut rng = thread_rng();
                 let bearing = rng.gen_range(0.0..360.0);
                 let distance = rng.gen_range(0.0..200.0);
-                map::pan_to_position(&model);
-                map::render_position(&model);
-
-                if model.is_outside_osm_trigger_box() {
-                    info!("Outside OSM trigger box. Initiating download.");
-                    model.osm_chunk_position = model.position;
-                    map::render_topology(&model);
-
-                    let bbox = pos.bbox(model.osm_chunk_radius);
-                    orders
-                        .perform_cmd(async move { Msg::OsmFetched(send_osm_request(&bbox).await) });
-                }
-
-                // Make sure the map is centered on our position even if the size of the map has changed
-                orders.after_next_render(|_| Msg::InvalidateMapSize);
-
                 model.position = Some(destination(pos, bearing, distance));
+                render_position(model, orders);
             }
         }
 
-        Msg::Increment => {
-            let window = web_sys::window().expect("Unable to get browser window.");
-            let navigator = window.navigator();
-            let geolocation = navigator.geolocation().expect("Unable to get geolocation.");
-            let geo_callback_function =
-                Closure::wrap(Box::new(geo_callback) as Box<dyn FnMut(JsValue)>);
-            geolocation
-                .get_current_position(geo_callback_function.as_ref().unchecked_ref())
-                .expect("Unable to get position.");
-            geo_callback_function.forget();
+        Msg::Increment => {}
+
+        Msg::Position(lat, lon) => {
+            info!("Position");
+            let is_first = model.position.is_none();
+            model.position = Some(Coord { lat, lon });
+
+            if is_first {
+                map::set_view(&model);
+            }
+
+            render_position(model, orders);
         }
     }
+}
+
+fn render_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
+    map::pan_to_position(&model);
+    map::render_position(&model);
+
+    if model.is_outside_osm_trigger_box() {
+        info!("Outside OSM trigger box. Initiating download.");
+        model.osm_chunk_position = model.position;
+        map::render_topology(&model);
+
+        let bbox = model.position.unwrap().bbox(model.osm_chunk_radius);
+        orders.perform_cmd(async move { Msg::OsmFetched(send_osm_request(&bbox).await) });
+    }
+
+    // Make sure the map is centered on our position even if the size of the map has changed
+    orders.after_next_render(|_| Msg::InvalidateMapSize);
 }
 
 fn view(model: &Model) -> Node<Msg> {
@@ -367,56 +244,4 @@ cfg_if! {
 fn main() {
     init_log();
     App::start("app", init, update, view);
-}
-
-impl Model {
-    fn find_nearest_point_on_each_way(&self) -> Vec<(Coord, f64, &OsmWay)> {
-        match &self.position {
-            None => vec![],
-            Some(pos) => self
-                .osm
-                .ways
-                .iter()
-                .map(|way| {
-                    way.points(&self.osm)
-                        .windows(2)
-                        .map(|line_segment| {
-                            let a = line_segment[0];
-                            let b = line_segment[1];
-                            let destination = geo::nearest_point(&a.into(), &b.into(), pos);
-                            let distance = geo::distance(pos, &destination);
-                            (destination, distance, way)
-                        })
-                        .min_by(|(_, x, _), (_, y, _)| {
-                            x.partial_cmp(y).expect("Could not compare distances")
-                        })
-                        .expect("Could not find a nearest distance")
-                })
-                .collect(),
-        }
-    }
-
-    fn find_nearest_way(&self) -> Option<&OsmWay> {
-        let nearest_points = self.find_nearest_point_on_each_way();
-
-        let (_, _, way) = nearest_points.iter().min_by(|(_, x, _), (_, y, _)| {
-            x.partial_cmp(y).expect("Could not compare distances")
-        })?;
-
-        Some(way)
-    }
-
-    fn is_outside_osm_trigger_box(&self) -> bool {
-        if let (Some(pos), Some(chunk_pos)) = (&self.position, &self.osm_chunk_position) {
-            let radius = self.osm_chunk_radius * self.osm_chunk_trigger_factor;
-            let bbox = chunk_pos.bbox(radius);
-
-            pos.lat > bbox.upper_right.lat
-                || pos.lon > bbox.upper_right.lon
-                || pos.lat < bbox.lower_left.lat
-                || pos.lon < bbox.lower_left.lon
-        } else {
-            false
-        }
-    }
 }
