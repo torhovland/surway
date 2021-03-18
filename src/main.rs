@@ -187,12 +187,7 @@ fn render_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
 }
 
 fn view(model: &Model) -> Node<Msg> {
-    div![
-        C!["content"],
-        div![id!["map"]],
-        button!["Locate!", ev(Ev::Click, |_| Msg::Increment),],
-        view_way(&model),
-    ]
+    div![C!["content"], div![id!["map"]], view_way(&model),]
 }
 
 fn view_way(model: &Model) -> Node<Msg> {
