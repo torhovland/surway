@@ -7,6 +7,7 @@ use model::Model;
 use osm::OsmDocument;
 use rand::prelude::*;
 use seed::{fetch::StatusCategory, prelude::*, *};
+use web_sys::PositionOptions;
 
 mod bindings;
 mod geo;
@@ -34,6 +35,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
             coords.latitude(),
             coords.longitude()
         );
+
         app.update(msg_mapper(Msg::Position(
             coords.latitude(),
             coords.longitude(),
@@ -44,8 +46,16 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     let navigator = window.navigator();
     let geolocation = navigator.geolocation().expect("Unable to get geolocation.");
     let geo_callback_function = Closure::wrap(Box::new(geo_callback) as Box<dyn FnMut(JsValue)>);
+
+    let mut options = PositionOptions::new();
+    options.enable_high_accuracy(true);
+
     geolocation
-        .get_current_position(geo_callback_function.as_ref().unchecked_ref())
+        .watch_position_with_error_callback_and_options(
+            geo_callback_function.as_ref().unchecked_ref(),
+            None,
+            &options,
+        )
         .expect("Unable to get position.");
     geo_callback_function.forget();
 
