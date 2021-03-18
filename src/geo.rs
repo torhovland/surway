@@ -121,11 +121,22 @@ impl OsmNode {
 
 impl OsmWay {
     pub fn distance(self: &OsmWay, coord: &Coord, osm: &OsmDocument) -> f64 {
+        let (_, distance, _) = self.find_nearest_point(coord, osm);
+        distance
+    }
+
+    pub fn find_nearest_point(&self, position: &Coord, osm: &OsmDocument) -> (Coord, f64, &OsmWay) {
         self.points(osm)
-            .iter()
-            .map(|point| point.distance(coord))
-            .min_by(|a, b| a.partial_cmp(b).expect("Tried to compare a NaN"))
-            .unwrap_or(f64::INFINITY) // In case of a way with no points
+            .windows(2)
+            .map(|line_segment| {
+                let a = line_segment[0];
+                let b = line_segment[1];
+                let destination = nearest_point(&a.into(), &b.into(), position);
+                let distance = distance(position, &destination);
+                (destination, distance, self)
+            })
+            .min_by(|(_, x, _), (_, y, _)| x.partial_cmp(y).expect("Could not compare distances"))
+            .expect("Could not find a nearest distance")
     }
 }
 

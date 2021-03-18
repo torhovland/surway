@@ -4,7 +4,7 @@ use geo::{destination, BoundingBox, Coord};
 use leaflet::{LayerGroup, Map};
 use log::{error, info};
 use model::Model;
-use osm::OsmDocument;
+use osm::{OsmDocument, OsmWay};
 use rand::prelude::*;
 use seed::{fetch::StatusCategory, prelude::*, *};
 use web_sys::PositionOptions;
@@ -62,7 +62,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     orders.after_next_render(|_| Msg::SetMap(map::init())); // Cannot initialize Leaflet until the map element has rendered.
 
     if url.search().contains_key("random_walk") {
-        orders.stream(streams::interval(1000, || Msg::RandomWalk));
+        orders.stream(streams::interval(8000, || Msg::RandomWalk));
     }
 
     Model {

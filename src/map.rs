@@ -1,13 +1,12 @@
 use crate::{
     geo::{destination, Coord},
-    osm::OsmNode,
+    osm::{OsmNode, OsmWay},
     Model,
 };
 use leaflet::{Circle, LatLng, LatLngBounds, LayerGroup, Map, Polyline, Rectangle, TileLayer};
-use log::{error, info};
+use log::info;
 use seed::prelude::*;
 use serde::{Deserialize, Serialize};
-use web_sys::console::info;
 
 #[derive(Serialize, Deserialize)]
 #[allow(non_snake_case)]
@@ -137,6 +136,62 @@ pub fn render_position(model: &Model) {
                 &JsValue::from_serde(&LineOptions {
                     color: "blue".into(),
                     weight: 2,
+                    fillOpacity: 0.0,
+                })
+                .expect("Unable to serialize polyline options"),
+            ));
+
+            let destination = model
+                .find_nearest_point_on_each_way()
+                .into_iter()
+                .filter(|(_, _, way)| way.id == nearest.id)
+                .map(|(destination, _, _)| destination)
+                .next()
+                .unwrap();
+
+            position_layer_group.addLayer(&Polyline::new_with_options(
+                vec![position, &destination]
+                    .into_iter()
+                    .map(LatLng::from)
+                    .map(JsValue::from)
+                    .collect(),
+                &JsValue::from_serde(&LineOptions {
+                    color: "purple".into(),
+                    weight: 1,
+                    fillOpacity: 0.0,
+                })
+                .expect("Unable to serialize polyline options"),
+            ));
+
+            position_layer_group.addLayer(&Polyline::new_with_options(
+                vec![
+                    LatLng::from(position),
+                    LatLng::from(nearest.points(&model.osm).iter().next().unwrap().clone()),
+                ]
+                .into_iter()
+                .map(LatLng::from)
+                .map(JsValue::from)
+                .collect(),
+                &JsValue::from_serde(&LineOptions {
+                    color: "purple".into(),
+                    weight: 1,
+                    fillOpacity: 0.0,
+                })
+                .expect("Unable to serialize polyline options"),
+            ));
+
+            position_layer_group.addLayer(&Polyline::new_with_options(
+                vec![
+                    LatLng::from(position),
+                    LatLng::from(nearest.points(&model.osm).iter().last().unwrap().clone()),
+                ]
+                .into_iter()
+                .map(LatLng::from)
+                .map(JsValue::from)
+                .collect(),
+                &JsValue::from_serde(&LineOptions {
+                    color: "purple".into(),
+                    weight: 1,
                     fillOpacity: 0.0,
                 })
                 .expect("Unable to serialize polyline options"),

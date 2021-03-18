@@ -24,21 +24,7 @@ impl Model {
                 .osm
                 .ways
                 .iter()
-                .map(|way| {
-                    way.points(&self.osm)
-                        .windows(2)
-                        .map(|line_segment| {
-                            let a = line_segment[0];
-                            let b = line_segment[1];
-                            let destination = nearest_point(&a.into(), &b.into(), pos);
-                            let distance = distance(pos, &destination);
-                            (destination, distance, way)
-                        })
-                        .min_by(|(_, x, _), (_, y, _)| {
-                            x.partial_cmp(y).expect("Could not compare distances")
-                        })
-                        .expect("Could not find a nearest distance")
-                })
+                .map(|way| way.find_nearest_point(pos, &self.osm))
                 .collect(),
         }
     }
