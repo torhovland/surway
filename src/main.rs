@@ -122,7 +122,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.topology_layer_group = Some(topology_layer_group);
             model.position_layer_group = Some(position_layer_group);
             map::set_view(&model);
-            map::render_topology(&model);
+            map::render_topology_and_position(&model);
         }
 
         Msg::InvalidateMapSize => {
@@ -136,7 +136,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 .expect("Unable to deserialize the OSM data");
 
             info!("Rendering a new OSM topology.");
-            map::render_topology(&model);
+            map::render_topology_and_position(&model);
         }
 
         Msg::OsmFetched(Err(fetch_error)) => {
@@ -149,7 +149,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 let bearing = rng.gen_range(0.0..360.0);
                 let distance = rng.gen_range(0.0..200.0);
                 model.position = Some(destination(pos, bearing, distance));
-                render_position(model, orders);
+                handle_new_position(model, orders);
             }
         }
 
@@ -164,19 +164,18 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 map::set_view(&model);
             }
 
-            render_position(model, orders);
+            handle_new_position(model, orders);
         }
     }
 }
 
-fn render_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
+fn handle_new_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
     map::pan_to_position(&model);
     map::render_position(&model);
 
     if model.is_outside_osm_trigger_box() {
         info!("Outside OSM trigger box. Initiating download.");
         model.osm_chunk_position = model.position;
-        map::render_topology(&model);
 
         let bbox = model.position.unwrap().bbox(model.osm_chunk_radius);
         orders.perform_cmd(async move { Msg::OsmFetched(send_osm_request(&bbox).await) });

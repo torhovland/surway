@@ -54,7 +54,7 @@ pub fn pan_to_position(model: &Model) {
     }
 }
 
-pub fn render_topology(model: &Model) {
+pub fn render_topology_and_position(model: &Model) {
     if let (
         Some(map),
         Some(topology_layer_group),
@@ -106,10 +106,9 @@ pub fn render_topology(model: &Model) {
                 .expect("Unable to serialize polyline options"),
             ));
         }
-
-        topology_layer_group.addTo(&map);
-        position_layer_group.addTo(&map);
     }
+
+    render_position(model);
 }
 
 pub fn render_position(model: &Model) {
