@@ -71,7 +71,7 @@ pub fn render_topology_and_position(model: &Model) {
             &bbox(chunk_position, model.osm_chunk_radius),
             &JsValue::from_serde(&LineOptions {
                 color: "red".into(),
-                weight: 3,
+                weight: 2,
                 fillOpacity: 0.0,
             })
             .expect("Unable to serialize rectangle options"),
@@ -84,7 +84,7 @@ pub fn render_topology_and_position(model: &Model) {
             ),
             &JsValue::from_serde(&LineOptions {
                 color: "orange".into(),
-                weight: 3,
+                weight: 2,
                 fillOpacity: 0.0,
             })
             .expect("Unable to serialize rectangle options"),
@@ -99,7 +99,7 @@ pub fn render_topology_and_position(model: &Model) {
                     .collect(),
                 &JsValue::from_serde(&LineOptions {
                     color: "green".into(),
-                    weight: 10,
+                    weight: 5,
                     fillOpacity: 0.0,
                 })
                 .expect("Unable to serialize polyline options"),
@@ -135,7 +135,7 @@ pub fn render_position(model: &Model) {
                     .collect(),
                 &JsValue::from_serde(&LineOptions {
                     color: "blue".into(),
-                    weight: 15,
+                    weight: 8,
                     fillOpacity: 0.0,
                 })
                 .expect("Unable to serialize polyline options"),

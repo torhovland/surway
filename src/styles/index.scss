@@ -23,8 +23,8 @@ ul {
     display: flex;
     flex-direction: column;
     font-family: "Noto Sans JP", sans-serif;
-    font-size: 40px;
-    line-height: 60px;
+    font-size: 20px;
+    line-height: 30px;
 }
 
 #map {
@@ -42,7 +42,7 @@ ul {
 // Landscape
 @media (min-aspect-ratio: 1/1) {
     .content {
-        font-size: 24px;
-        line-height: 36px;
+        font-size: 14px;
+        line-height: 21px;
     }
 }
