@@ -99,7 +99,7 @@ pub fn render_topology_and_position(model: &Model) {
                     .collect(),
                 &JsValue::from_serde(&LineOptions {
                     color: "green".into(),
-                    weight: 20,
+                    weight: 10,
                     fillOpacity: 0.0,
                 })
                 .expect("Unable to serialize polyline options"),
@@ -135,7 +135,7 @@ pub fn render_position(model: &Model) {
                     .collect(),
                 &JsValue::from_serde(&LineOptions {
                     color: "blue".into(),
-                    weight: 30,
+                    weight: 15,
                     fillOpacity: 0.0,
                 })
                 .expect("Unable to serialize polyline options"),
