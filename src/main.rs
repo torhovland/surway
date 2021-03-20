@@ -82,24 +82,15 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     }
 }
 
-fn get_osm_query(bbox: &BoundingBox) -> String {
-    format!(
-        "way({},{},{},{})[\"highway\"]; (._;>;); out;",
-        bbox.lower_left.lat, bbox.lower_left.lon, bbox.upper_right.lat, bbox.upper_right.lon
-    )
-}
-
 async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
-    let url = "https://overpass-api.de/api/interpreter";
-    let query = get_osm_query(bbox);
-    info!("Fetching query {}", query);
+    let url = format!(
+        "https://overpass-api.de/api/interpreter?data=[bbox];way[highway];(._;>;);out;&bbox={},{},{},{}",
+        bbox.lower_left.lon, bbox.lower_left.lat, bbox.upper_right.lon, bbox.upper_right.lat
+    );
 
-    let response = Request::new(url)
-        .method(Method::Post)
-        .text(query)
-        .fetch()
-        .await
-        .expect("OSM request failed");
+    info!("Fetching query {}", url);
+
+    let response = Request::new(url).fetch().await.expect("OSM request failed");
     let status = response.status();
     let body = response.text().await.expect("Unable to get response text");
 
