@@ -61,7 +61,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     orders.after_next_render(|_| Msg::SetMap(map::init())); // Cannot initialize Leaflet until the map element has rendered.
 
     if url.search().contains_key("random_walk") {
-        orders.stream(streams::interval(8000, || Msg::RandomWalk));
+        orders.stream(streams::interval(1000, || Msg::RandomWalk));
     }
 
     // Create a random start location, so we get to init the map even if geolocation isn't available.
@@ -142,7 +142,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::RandomWalk => {
             let mut rng = thread_rng();
             let bearing = rng.gen_range(0.0..360.0);
-            let distance = rng.gen_range(0.0..200.0);
+            let distance = rng.gen_range(0.0..100.0);
             model.position = destination(&model.position, bearing, distance);
             handle_new_position(model, orders);
         }
@@ -183,42 +183,34 @@ fn view_way(model: &Model) -> Node<Msg> {
                     C!["flex-list"],
                     way.tags.iter().map(|tag| div![
                         img![attrs! {At::Src => "icons/tag.svg"}, C!["icon"]],
-                        span![format!(" {} = {}", tag.k, tag.v)],
+                        format!(" {} = {}", tag.k, tag.v),
                     ])
                 ],
-                div![
-                    div![
-                        img![attrs! {At::Src => "icons/ruler-green.svg"}, C!["icon"]],
-                        format!(
-                            " away: {} m",
-                            way.distance(&model.position, &model.osm).round()
-                        )
-                    ],
-                    match (way.start(&model.osm), way.end(&model.osm)) {
-                        (Some(start), Some(end)) => {
+                div![match (way.start(&model.osm), way.end(&model.osm)) {
+                    (Some(start), Some(end)) => {
+                        div![
+                            C!["flex-list"],
                             div![
-                                C!["flex-list"],
-                                div![
-                                    img![attrs! {At::Src => "icons/ruler-green.svg"}, C!["icon"]],
-                                    span![format!(
-                                        " start: {} m",
-                                        start.distance(&model.position).round()
-                                    )],
-                                ],
-                                div![
-                                    img![attrs! {At::Src => "icons/ruler-green.svg"}, C!["icon"]],
-                                    span![format!(
-                                        " end: {} m",
-                                        end.distance(&model.position).round()
-                                    )]
-                                ]
-                            ]
-                        }
-                        _ => {
-                            div![]
-                        }
+                                img![attrs! {At::Src => "icons/ruler-green.svg"}, C!["icon"]],
+                                format!(" start: {} m", start.distance(&model.position).round()),
+                            ],
+                            div![
+                                img![attrs! {At::Src => "icons/ruler-green.svg"}, C!["icon"]],
+                                format!(" end: {} m", end.distance(&model.position).round())
+                            ],
+                            div![
+                                img![attrs! {At::Src => "icons/ruler-green.svg"}, C!["icon"]],
+                                format!(
+                                    " away: {} m",
+                                    way.distance(&model.position, &model.osm).round()
+                                )
+                            ],
+                        ]
                     }
-                ]
+                    _ => {
+                        div![]
+                    }
+                }]
             ]
         }
         None => div![],

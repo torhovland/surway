@@ -88,7 +88,7 @@ pub fn render_topology_and_position(model: &Model) {
                     .collect(),
                 &JsValue::from_serde(&LineOptions {
                     color: "green".into(),
-                    weight: 5,
+                    weight: 3,
                     fillOpacity: 0.0,
                 })
                 .expect("Unable to serialize polyline options"),
@@ -107,12 +107,6 @@ pub fn render_position(model: &Model) {
     ) {
         position_layer_group.clearLayers();
 
-        position_layer_group.addLayer(&Circle::new_with_options(
-            &LatLng::from(&model.position),
-            &JsValue::from_serde(&CircleOptions { radius: 3.5 })
-                .expect("Unable to serialize circle options"),
-        ));
-
         if let Some(nearest) = model.find_nearest_way() {
             position_layer_group.addLayer(&Polyline::new_with_options(
                 nearest
@@ -123,12 +117,18 @@ pub fn render_position(model: &Model) {
                     .collect(),
                 &JsValue::from_serde(&LineOptions {
                     color: "blue".into(),
-                    weight: 8,
+                    weight: 5,
                     fillOpacity: 0.0,
                 })
                 .expect("Unable to serialize polyline options"),
             ));
         }
+
+        position_layer_group.addLayer(&Circle::new_with_options(
+            &LatLng::from(&model.position),
+            &JsValue::from_serde(&CircleOptions { radius: 8.0 })
+                .expect("Unable to serialize circle options"),
+        ));
 
         topology_layer_group.addTo(&map);
         position_layer_group.addTo(&map);
