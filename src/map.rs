@@ -4,7 +4,6 @@ use crate::{
     Model,
 };
 use leaflet::{Circle, LatLng, LatLngBounds, LayerGroup, Map, Polyline, Rectangle, TileLayer};
-use log::info;
 use seed::prelude::*;
 use serde::{Deserialize, Serialize};
 

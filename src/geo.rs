@@ -15,6 +15,21 @@ pub struct BoundingBox {
 
 // Formulas from https://www.movable-type.co.uk/scripts/latlong.html
 
+pub fn destination(c1: &Coord, bearing: f64, distance: f64) -> Coord {
+    let (phi1, lambda1) = (c1.phi(), c1.lambda());
+    let brng = bearing.to_radians();
+    let phi2 =
+        (phi1.sin() * (distance / R).cos() + phi1.cos() * (distance / R).sin() * brng.cos()).asin();
+    let lambda2 = lambda1
+        + (brng.sin() * (distance / R).sin() * phi1.cos())
+            .atan2((distance / R).cos() - phi1.sin() * phi2.sin());
+
+    Coord {
+        lat: phi2.to_degrees(),
+        lon: ((lambda2 + 540.0) % 360.0 - 180.0).to_degrees(),
+    }
+}
+
 fn distance(c1: &Coord, c2: &Coord) -> f64 {
     // Haversine formula
     let (phi1, phi2) = (c1.phi(), c2.phi());
@@ -33,21 +48,6 @@ fn bearing(c1: &Coord, c2: &Coord) -> f64 {
     let y = delta_lambda.sin() * phi2.cos();
     let x = phi1.cos() * phi2.sin() - phi1.sin() * phi2.cos() * delta_lambda.cos();
     (y.atan2(x).to_degrees() + 360.0) % 360.0
-}
-
-pub fn destination(c1: &Coord, bearing: f64, distance: f64) -> Coord {
-    let (phi1, lambda1) = (c1.phi(), c1.lambda());
-    let brng = bearing.to_radians();
-    let phi2 =
-        (phi1.sin() * (distance / R).cos() + phi1.cos() * (distance / R).sin() * brng.cos()).asin();
-    let lambda2 = lambda1
-        + (brng.sin() * (distance / R).sin() * phi1.cos())
-            .atan2((distance / R).cos() - phi1.sin() * phi2.sin());
-
-    Coord {
-        lat: phi2.to_degrees(),
-        lon: ((lambda2 + 540.0) % 360.0 - 180.0).to_degrees(),
-    }
 }
 
 fn angular_distance(c1: &Coord, c2: &Coord) -> f64 {
@@ -86,14 +86,6 @@ fn nearest_point(c1: &Coord, c2: &Coord, c3: &Coord) -> Coord {
 }
 
 impl Coord {
-    fn phi(self: &Coord) -> f64 {
-        self.lat.to_radians()
-    }
-
-    fn lambda(self: &Coord) -> f64 {
-        self.lon.to_radians()
-    }
-
     pub fn bbox(self: &Coord, radius: f64) -> BoundingBox {
         let north = destination(self, 0.0, radius);
         let east = destination(self, 90.0, radius);
@@ -110,6 +102,14 @@ impl Coord {
                 lon: east.lon,
             },
         }
+    }
+
+    fn phi(self: &Coord) -> f64 {
+        self.lat.to_radians()
+    }
+
+    fn lambda(self: &Coord) -> f64 {
+        self.lon.to_radians()
     }
 }
 

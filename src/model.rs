@@ -17,14 +17,6 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn find_nearest_point_on_each_way(&self) -> Vec<(Coord, f64, &OsmWay)> {
-        self.osm
-            .ways
-            .iter()
-            .map(|way| way.find_nearest_point(&self.position, &self.osm))
-            .collect()
-    }
-
     pub fn find_nearest_way(&self) -> Option<&OsmWay> {
         let nearest_points = self.find_nearest_point_on_each_way();
 
@@ -47,5 +39,13 @@ impl Model {
         } else {
             true
         }
+    }
+
+    fn find_nearest_point_on_each_way(&self) -> Vec<(Coord, f64, &OsmWay)> {
+        self.osm
+            .ways
+            .iter()
+            .map(|way| way.find_nearest_point(&self.position, &self.osm))
+            .collect()
     }
 }

@@ -64,6 +64,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         orders.stream(streams::interval(8000, || Msg::RandomWalk));
     }
 
+    // Create a random start location, so we get to init the map even if geolocation isn't available.
     let mut rng = thread_rng();
     let position = Coord {
         lat: rng.gen_range(-90.0..90.0),
@@ -103,12 +104,9 @@ async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
-        Msg::SetMap((map, topology_layer_group, position_layer_group)) => {
-            model.map = Some(map);
-            model.topology_layer_group = Some(topology_layer_group);
-            model.position_layer_group = Some(position_layer_group);
-            map::set_view(&model);
-            map::render_topology_and_position(&model);
+        Msg::DownloadOsmChunk => {
+            let bbox = model.position.bbox(model.osm_chunk_radius);
+            orders.perform_cmd(async move { Msg::OsmFetched(send_osm_request(&bbox).await) });
         }
 
         Msg::InvalidateMapSize => {
@@ -136,6 +134,11 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             error!("Fetching OSM data failed: {:#?}", fetch_error);
         }
 
+        Msg::Position(lat, lon) => {
+            model.position = Coord { lat, lon };
+            handle_new_position(model, orders);
+        }
+
         Msg::RandomWalk => {
             let mut rng = thread_rng();
             let bearing = rng.gen_range(0.0..360.0);
@@ -144,14 +147,12 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             handle_new_position(model, orders);
         }
 
-        Msg::Position(lat, lon) => {
-            model.position = Coord { lat, lon };
-            handle_new_position(model, orders);
-        }
-
-        Msg::DownloadOsmChunk => {
-            let bbox = model.position.bbox(model.osm_chunk_radius);
-            orders.perform_cmd(async move { Msg::OsmFetched(send_osm_request(&bbox).await) });
+        Msg::SetMap((map, topology_layer_group, position_layer_group)) => {
+            model.map = Some(map);
+            model.topology_layer_group = Some(topology_layer_group);
+            model.position_layer_group = Some(position_layer_group);
+            map::set_view(&model);
+            map::render_topology_and_position(&model);
         }
     }
 }
