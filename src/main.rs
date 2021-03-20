@@ -184,21 +184,31 @@ fn view_way(model: &Model) -> Node<Msg> {
                     .iter()
                     .map(|tag| li![format!("{} = {}", tag.k, tag.v)])],
                 div![
-                    div![format!(
-                        "Distance away = {} m",
-                        way.distance(&model.position, &model.osm).round()
-                    )],
+                    div![
+                        img![attrs! {At::Src => "icons/ruler-green.svg"}, C!["icon"]],
+                        format!(
+                            " away: {} m",
+                            way.distance(&model.position, &model.osm).round()
+                        )
+                    ],
                     match (way.start(&model.osm), way.end(&model.osm)) {
                         (Some(start), Some(end)) => {
                             div![
-                                div![format!(
-                                    "Distance to start = {} m",
-                                    start.distance(&model.position).round()
-                                )],
-                                div![format!(
-                                    "Distance to end = {} m",
-                                    end.distance(&model.position).round()
-                                )]
+                                C!["flex-list"],
+                                div![
+                                    img![attrs! {At::Src => "icons/ruler-green.svg"}, C!["icon"]],
+                                    span![format!(
+                                        " start: {} m",
+                                        start.distance(&model.position).round()
+                                    )],
+                                ],
+                                div![
+                                    img![attrs! {At::Src => "icons/ruler-green.svg"}, C!["icon"]],
+                                    span![format!(
+                                        " end: {} m",
+                                        end.distance(&model.position).round()
+                                    )]
+                                ]
                             ]
                         }
                         _ => {

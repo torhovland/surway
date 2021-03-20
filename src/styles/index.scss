@@ -39,6 +39,15 @@ ul {
     color: white;
 }
 
+.flex-list {
+    display: flex;
+    gap: 1rem;
+}
+
+.icon {
+    height: 1rem;
+}
+
 // Landscape
 @media (min-aspect-ratio: 1/1) {
     .content {
