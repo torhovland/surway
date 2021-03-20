@@ -15,7 +15,7 @@ pub struct BoundingBox {
 
 // Formulas from https://www.movable-type.co.uk/scripts/latlong.html
 
-pub fn distance(c1: &Coord, c2: &Coord) -> f64 {
+fn distance(c1: &Coord, c2: &Coord) -> f64 {
     // Haversine formula
     let (phi1, phi2) = (c1.phi(), c2.phi());
     let (lambda1, lambda2) = (c1.lambda(), c2.lambda());
@@ -26,7 +26,7 @@ pub fn distance(c1: &Coord, c2: &Coord) -> f64 {
     R * 2.0 * a.sqrt().atan2((1.0 - a).sqrt())
 }
 
-pub fn bearing(c1: &Coord, c2: &Coord) -> f64 {
+fn bearing(c1: &Coord, c2: &Coord) -> f64 {
     let (phi1, phi2) = (c1.phi(), c2.phi());
     let (lambda1, lambda2) = (c1.lambda(), c2.lambda());
     let delta_lambda = lambda2 - lambda1;
@@ -58,7 +58,7 @@ fn delta_theta(c1: &Coord, c2: &Coord, c3: &Coord) -> f64 {
     bearing(c1, c3).to_radians() - bearing(c1, c2).to_radians()
 }
 
-pub fn along_track_distance(c1: &Coord, c2: &Coord, c3: &Coord) -> f64 {
+fn along_track_distance(c1: &Coord, c2: &Coord, c3: &Coord) -> f64 {
     // A version with negative sign if we end up before the start point (c1)
     // https://github.com/mrJean1/PyGeodesy/blob/master/pygeodesy/sphericalTrigonometry.py
 
@@ -73,7 +73,7 @@ pub fn along_track_distance(c1: &Coord, c2: &Coord, c3: &Coord) -> f64 {
     }
 }
 
-pub fn nearest_point(c1: &Coord, c2: &Coord, c3: &Coord) -> Coord {
+fn nearest_point(c1: &Coord, c2: &Coord, c3: &Coord) -> Coord {
     let along_track_distance = along_track_distance(c1, c2, c3);
 
     if along_track_distance < 0.0 {
