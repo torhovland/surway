@@ -21,13 +21,12 @@ enum Msg {
     OsmFetched(fetch::Result<String>),
     Position(f64, f64),
     RandomWalk,
-    Increment,
 }
 
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
 
-    let mut geo_callback = move |position: JsValue| {
+    let geo_callback = move |position: JsValue| {
         let pos = JsCast::unchecked_into::<GeolocationPosition>(position);
         let coords = pos.coords();
         info!(
@@ -162,8 +161,6 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 handle_new_position(model, orders);
             }
         }
-
-        Msg::Increment => {}
 
         Msg::Position(lat, lon) => {
             info!("Position");

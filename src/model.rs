@@ -1,7 +1,7 @@
 use leaflet::{LayerGroup, Map};
 
 use crate::{
-    geo::{distance, nearest_point, Coord},
+    geo::Coord,
     osm::{OsmDocument, OsmWay},
 };
 

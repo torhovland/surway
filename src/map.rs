@@ -1,6 +1,6 @@
 use crate::{
     geo::{destination, Coord},
-    osm::{OsmNode, OsmWay},
+    osm::OsmNode,
     Model,
 };
 use leaflet::{Circle, LatLng, LatLngBounds, LayerGroup, Map, Polyline, Rectangle, TileLayer};
@@ -54,17 +54,9 @@ pub fn pan_to_position(model: &Model) {
 }
 
 pub fn render_topology_and_position(model: &Model) {
-    if let (
-        Some(map),
-        Some(topology_layer_group),
-        Some(position_layer_group),
-        Some(chunk_position),
-    ) = (
-        &model.map,
-        &model.topology_layer_group,
-        &model.position_layer_group,
-        &model.osm_chunk_position,
-    ) {
+    if let (Some(topology_layer_group), Some(chunk_position)) =
+        (&model.topology_layer_group, &model.osm_chunk_position)
+    {
         topology_layer_group.clearLayers();
 
         topology_layer_group.addLayer(&Rectangle::new_with_options(
