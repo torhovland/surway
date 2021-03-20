@@ -20,7 +20,7 @@ enum Msg {
     InvalidateMapSize,
     OsmFetched(fetch::Result<String>),
     Position(f64, f64),
-    RetryDownload,
+    DownloadOsmChunk,
     RandomWalk,
 }
 
@@ -145,7 +145,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 if status.code == 429 || status.code == 504 {
                     const SECONDS: u32 = 10;
                     warn!("Server is busy. Retrying in {} seconds.", SECONDS);
-                    orders.perform_cmd(cmds::timeout(SECONDS * 1000, || Msg::RetryDownload));
+                    orders.perform_cmd(cmds::timeout(SECONDS * 1000, || Msg::DownloadOsmChunk));
                     return;
                 }
             }
@@ -174,7 +174,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             handle_new_position(model, orders);
         }
 
-        Msg::RetryDownload => {
+        Msg::DownloadOsmChunk => {
             let bbox = model.position.unwrap().bbox(model.osm_chunk_radius);
             orders.perform_cmd(async move { Msg::OsmFetched(send_osm_request(&bbox).await) });
         }
@@ -189,8 +189,7 @@ fn handle_new_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
         info!("Outside OSM trigger box. Initiating download.");
         model.osm_chunk_position = model.position;
 
-        let bbox = model.position.unwrap().bbox(model.osm_chunk_radius);
-        orders.perform_cmd(async move { Msg::OsmFetched(send_osm_request(&bbox).await) });
+        orders.send_msg(Msg::DownloadOsmChunk);
     }
 
     // Make sure the map is centered on our position even if the size of the map has changed
