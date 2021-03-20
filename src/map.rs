@@ -40,15 +40,13 @@ pub fn init() -> (Map, LayerGroup, LayerGroup) {
 }
 
 pub fn set_view(model: &Model) {
-    if let (Some(map), Some(position)) = (&model.map, &model.position) {
-        info!("Setting map view to {:?}.", &position);
+    if let (Some(map), position) = (&model.map, &model.position) {
         map.setView(&position.into(), 19.0);
     }
 }
 
 pub fn pan_to_position(model: &Model) {
-    if let (Some(map), Some(position)) = (&model.map, &model.position) {
-        info!("Panning to {:?}.", &position);
+    if let (Some(map), position) = (&model.map, &model.position) {
         map.panTo(&position.into());
     }
 }
@@ -103,16 +101,15 @@ pub fn render_topology_and_position(model: &Model) {
 }
 
 pub fn render_position(model: &Model) {
-    if let (Some(map), Some(topology_layer_group), Some(position_layer_group), Some(position)) = (
+    if let (Some(map), Some(topology_layer_group), Some(position_layer_group)) = (
         &model.map,
         &model.topology_layer_group,
         &model.position_layer_group,
-        &model.position,
     ) {
         position_layer_group.clearLayers();
 
         position_layer_group.addLayer(&Circle::new_with_options(
-            &LatLng::from(position),
+            &LatLng::from(&model.position),
             &JsValue::from_serde(&CircleOptions { radius: 3.5 })
                 .expect("Unable to serialize circle options"),
         ));

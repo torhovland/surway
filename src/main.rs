@@ -16,25 +16,26 @@ mod model;
 mod osm;
 
 enum Msg {
-    SetMap((Map, LayerGroup, LayerGroup)),
+    DownloadOsmChunk,
     InvalidateMapSize,
     OsmFetched(fetch::Result<String>),
     Position(f64, f64),
-    DownloadOsmChunk,
     RandomWalk,
+    SetMap((Map, LayerGroup, LayerGroup)),
 }
 
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
 
+    let geolocation = web_sys::window()
+        .expect("Unable to get browser window.")
+        .navigator()
+        .geolocation()
+        .expect("Unable to get geolocation.");
+
     let geo_callback = move |position: JsValue| {
-        let pos = JsCast::unchecked_into::<GeolocationPosition>(position);
+        let pos: GeolocationPosition = position.into();
         let coords = pos.coords();
-        info!(
-            "Latitude: {}. Longitude: {}.",
-            coords.latitude(),
-            coords.longitude()
-        );
 
         app.update(msg_mapper(Msg::Position(
             coords.latitude(),
@@ -42,9 +43,6 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         )));
     };
 
-    let window = web_sys::window().expect("Unable to get browser window.");
-    let navigator = window.navigator();
-    let geolocation = navigator.geolocation().expect("Unable to get geolocation.");
     let geo_callback_function = Closure::wrap(Box::new(geo_callback) as Box<dyn FnMut(JsValue)>);
 
     let mut options = PositionOptions::new();
@@ -57,23 +55,20 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
             &options,
         )
         .expect("Unable to get position.");
+
     geo_callback_function.forget();
 
     orders.after_next_render(|_| Msg::SetMap(map::init())); // Cannot initialize Leaflet until the map element has rendered.
 
-    let position = if url.search().contains_key("random_start") {
-        let mut rng = thread_rng();
-        Some(Coord {
-            lat: rng.gen_range(-90.0..90.0),
-            lon: rng.gen_range(-180.0..180.0),
-        })
-    } else {
-        None
-    };
-
     if url.search().contains_key("random_walk") {
         orders.stream(streams::interval(8000, || Msg::RandomWalk));
     }
+
+    let mut rng = thread_rng();
+    let position = Coord {
+        lat: rng.gen_range(-90.0..90.0),
+        lon: rng.gen_range(-180.0..180.0),
+    };
 
     Model {
         map: None,
@@ -118,7 +113,6 @@ async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::SetMap((map, topology_layer_group, position_layer_group)) => {
-            info!("SetMap");
             model.map = Some(map);
             model.topology_layer_group = Some(topology_layer_group);
             model.position_layer_group = Some(position_layer_group);
@@ -136,7 +130,6 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.osm = quick_xml::de::from_str(&response_data)
                 .expect("Unable to deserialize the OSM data");
 
-            info!("Rendering a new OSM topology.");
             map::render_topology_and_position(&model);
         }
 
@@ -153,29 +146,20 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
 
         Msg::RandomWalk => {
-            if let Some(pos) = &model.position {
-                let mut rng = thread_rng();
-                let bearing = rng.gen_range(0.0..360.0);
-                let distance = rng.gen_range(0.0..200.0);
-                model.position = Some(destination(pos, bearing, distance));
-                handle_new_position(model, orders);
-            }
+            let mut rng = thread_rng();
+            let bearing = rng.gen_range(0.0..360.0);
+            let distance = rng.gen_range(0.0..200.0);
+            model.position = destination(&model.position, bearing, distance);
+            handle_new_position(model, orders);
         }
 
         Msg::Position(lat, lon) => {
-            info!("Position");
-            let is_first = model.position.is_none();
-            model.position = Some(Coord { lat, lon });
-
-            if is_first {
-                map::set_view(&model);
-            }
-
+            model.position = Coord { lat, lon };
             handle_new_position(model, orders);
         }
 
         Msg::DownloadOsmChunk => {
-            let bbox = model.position.unwrap().bbox(model.osm_chunk_radius);
+            let bbox = model.position.bbox(model.osm_chunk_radius);
             orders.perform_cmd(async move { Msg::OsmFetched(send_osm_request(&bbox).await) });
         }
     }
@@ -186,9 +170,7 @@ fn handle_new_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
     map::render_position(&model);
 
     if model.is_outside_osm_trigger_box() {
-        info!("Outside OSM trigger box. Initiating download.");
-        model.osm_chunk_position = model.position;
-
+        model.osm_chunk_position = Some(model.position);
         orders.send_msg(Msg::DownloadOsmChunk);
     }
 
@@ -209,36 +191,29 @@ fn view_way(model: &Model) -> Node<Msg> {
                     .tags
                     .iter()
                     .map(|tag| li![format!("{} = {}", tag.k, tag.v)])],
-                match &model.position {
-                    Some(pos) => {
-                        div![
-                            div![format!(
-                                "Distance away = {} m",
-                                way.distance(&pos, &model.osm).round()
-                            )],
-                            match (way.start(&model.osm), way.end(&model.osm)) {
-                                (Some(start), Some(end)) => {
-                                    div![
-                                        div![format!(
-                                            "Distance to start = {} m",
-                                            start.distance(&pos).round()
-                                        )],
-                                        div![format!(
-                                            "Distance to end = {} m",
-                                            end.distance(&pos).round()
-                                        )]
-                                    ]
-                                }
-                                _ => {
-                                    div![]
-                                }
-                            }
-                        ]
+                div![
+                    div![format!(
+                        "Distance away = {} m",
+                        way.distance(&model.position, &model.osm).round()
+                    )],
+                    match (way.start(&model.osm), way.end(&model.osm)) {
+                        (Some(start), Some(end)) => {
+                            div![
+                                div![format!(
+                                    "Distance to start = {} m",
+                                    start.distance(&model.position).round()
+                                )],
+                                div![format!(
+                                    "Distance to end = {} m",
+                                    end.distance(&model.position).round()
+                                )]
+                            ]
+                        }
+                        _ => {
+                            div![]
+                        }
                     }
-                    None => {
-                        div![]
-                    }
-                },
+                ]
             ]
         }
         None => div![],

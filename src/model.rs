@@ -10,7 +10,7 @@ pub struct Model {
     pub topology_layer_group: Option<LayerGroup>,
     pub position_layer_group: Option<LayerGroup>,
     pub osm: OsmDocument,
-    pub position: Option<Coord>,
+    pub position: Coord,
     pub osm_chunk_position: Option<Coord>,
     pub osm_chunk_radius: f64,
     pub osm_chunk_trigger_factor: f64,
@@ -18,15 +18,11 @@ pub struct Model {
 
 impl Model {
     pub fn find_nearest_point_on_each_way(&self) -> Vec<(Coord, f64, &OsmWay)> {
-        match &self.position {
-            None => vec![],
-            Some(pos) => self
-                .osm
-                .ways
-                .iter()
-                .map(|way| way.find_nearest_point(pos, &self.osm))
-                .collect(),
-        }
+        self.osm
+            .ways
+            .iter()
+            .map(|way| way.find_nearest_point(&self.position, &self.osm))
+            .collect()
     }
 
     pub fn find_nearest_way(&self) -> Option<&OsmWay> {
@@ -40,14 +36,14 @@ impl Model {
     }
 
     pub fn is_outside_osm_trigger_box(&self) -> bool {
-        if let (Some(pos), Some(chunk_pos)) = (&self.position, &self.osm_chunk_position) {
+        if let Some(chunk_pos) = &self.osm_chunk_position {
             let radius = self.osm_chunk_radius * self.osm_chunk_trigger_factor;
             let bbox = chunk_pos.bbox(radius);
 
-            pos.lat > bbox.upper_right.lat
-                || pos.lon > bbox.upper_right.lon
-                || pos.lat < bbox.lower_left.lat
-                || pos.lon < bbox.lower_left.lon
+            self.position.lat > bbox.upper_right.lat
+                || self.position.lon > bbox.upper_right.lon
+                || self.position.lat < bbox.lower_left.lat
+                || self.position.lon < bbox.lower_left.lon
         } else {
             true
         }
