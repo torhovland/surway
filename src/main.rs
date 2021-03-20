@@ -2,7 +2,7 @@ use bindings::GeolocationPosition;
 use cfg_if::cfg_if;
 use geo::{destination, BoundingBox, Coord};
 use leaflet::{LayerGroup, Map};
-use log::{error, info};
+use log::{error, info, warn};
 use model::Model;
 use osm::OsmDocument;
 use rand::prelude::*;
@@ -20,6 +20,7 @@ enum Msg {
     InvalidateMapSize,
     OsmFetched(fetch::Result<String>),
     Position(f64, f64),
+    RetryDownload,
     RandomWalk,
 }
 
@@ -109,18 +110,9 @@ async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
 
     if status.category == StatusCategory::Success {
         return Ok(body);
-    }
-    // else if status.code == 429 && status.code == 504 {
-    //     return Err(FetchError::StatusError(status));
-    // }
-    else {
+    } else {
         return Err(FetchError::StatusError(status));
     }
-
-    //     info!("Waiting 30 seconds ...");
-    //     thread::sleep(time::Duration::from_secs(30));
-
-    //     info!("Retrying...");
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -149,6 +141,14 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
 
         Msg::OsmFetched(Err(fetch_error)) => {
+            if let FetchError::StatusError(status) = &fetch_error {
+                if status.code == 429 || status.code == 504 {
+                    const SECONDS: u32 = 10;
+                    warn!("Server is busy. Retrying in {} seconds.", SECONDS);
+                    orders.perform_cmd(cmds::timeout(SECONDS * 1000, || Msg::RetryDownload));
+                    return;
+                }
+            }
             error!("Fetching OSM data failed: {:#?}", fetch_error);
         }
 
@@ -172,6 +172,11 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             }
 
             handle_new_position(model, orders);
+        }
+
+        Msg::RetryDownload => {
+            let bbox = model.position.unwrap().bbox(model.osm_chunk_radius);
+            orders.perform_cmd(async move { Msg::OsmFetched(send_osm_request(&bbox).await) });
         }
     }
 }
