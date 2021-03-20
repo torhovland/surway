@@ -179,10 +179,13 @@ fn view_way(model: &Model) -> Node<Msg> {
         Some(way) => {
             div![
                 C!["way-info"],
-                ul![way
-                    .tags
-                    .iter()
-                    .map(|tag| li![format!("{} = {}", tag.k, tag.v)])],
+                div![
+                    C!["flex-list"],
+                    way.tags.iter().map(|tag| div![
+                        img![attrs! {At::Src => "icons/tag.svg"}, C!["icon"]],
+                        span![format!(" {} = {}", tag.k, tag.v)],
+                    ])
+                ],
                 div![
                     div![
                         img![attrs! {At::Src => "icons/ruler-green.svg"}, C!["icon"]],
