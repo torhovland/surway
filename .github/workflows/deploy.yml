@@ -15,7 +15,7 @@ jobs:
         run: trunk --config Trunk-release.toml build
 
       - name: Deploy to GitHub Pages
-        if: success() && github.ref == 'refs/heads/master'
+        if: success() && github.ref == 'refs/heads/main'
         uses: crazy-max/ghaction-github-pages@v2
         with:
           build_dir: dist
