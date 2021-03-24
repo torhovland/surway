@@ -8,6 +8,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Test
+        run: cargo test
+
       - name: Build
         run: trunk --config Trunk-release.toml build
 
