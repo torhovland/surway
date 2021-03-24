@@ -21,4 +21,4 @@ jobs:
           build_dir: dist
           fqdn: surway.hovland.xyz
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.Deploy_PAT }}
