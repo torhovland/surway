@@ -1,4 +1,5 @@
 use leaflet::{LayerGroup, Map};
+use serde::Serialize;
 
 use crate::{
     geo::Coord,
@@ -9,11 +10,22 @@ pub struct Model {
     pub map: Option<Map>,
     pub topology_layer_group: Option<LayerGroup>,
     pub position_layer_group: Option<LayerGroup>,
+    pub notes_layer_group: Option<LayerGroup>,
     pub osm: OsmDocument,
     pub position: Coord,
     pub osm_chunk_position: Option<Coord>,
     pub osm_chunk_radius: f64,
     pub osm_chunk_trigger_factor: f64,
+    pub note_mode: bool,
+    pub notes: Vec<Note>,
+    pub new_note: String,
+}
+
+#[derive(Serialize)]
+pub struct Note {
+    pub datetime: f64,
+    pub text: String,
+    pub position: Coord,
 }
 
 impl Model {

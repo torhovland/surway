@@ -16,6 +16,7 @@ ul {
     top: 0;
     bottom: 0;
     width: 100%;
+    background-color: black;
 }
 
 .content {
@@ -31,11 +32,15 @@ ul {
     flex-grow: 1;
 }
 
+.button-row {
+    border: 0;
+}
+
 .way-info {
     flex-grow: 0;
     max-height: 50%;
+    margin-top: 0.5rem;
     padding: 0 1rem;
-    background-color: black;
     color: white;
 }
 
@@ -50,6 +55,18 @@ ul {
 
 .icon {
     height: 1rem;
+}
+
+.modal {
+    z-index: 1000 !important; // On top of Leaflet
+}
+
+.modal-container {
+    height: 100%;
+}
+
+textarea {
+    flex: 1;
 }
 
 // Landscape

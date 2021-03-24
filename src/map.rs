@@ -3,7 +3,9 @@ use crate::{
     osm::OsmNode,
     Model,
 };
-use leaflet::{Circle, LatLng, LatLngBounds, LayerGroup, Map, Polyline, Rectangle, TileLayer};
+use leaflet::{
+    Circle, LatLng, LatLngBounds, LayerGroup, Map, Marker, Polyline, Rectangle, TileLayer,
+};
 use seed::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -20,7 +22,10 @@ struct CircleOptions {
     radius: f64,
 }
 
-pub fn init() -> (Map, LayerGroup, LayerGroup) {
+#[derive(Serialize, Deserialize)]
+struct MarkerOptions {}
+
+pub fn init() -> (Map, LayerGroup, LayerGroup, LayerGroup) {
     let map = Map::new("map", &JsValue::NULL);
 
     let topology_layer_group = LayerGroup::new();
@@ -29,13 +34,21 @@ pub fn init() -> (Map, LayerGroup, LayerGroup) {
     let position_layer_group = LayerGroup::new();
     position_layer_group.addTo(&map);
 
+    let notes_layer_group = LayerGroup::new();
+    notes_layer_group.addTo(&map);
+
     TileLayer::new(
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         &JsValue::NULL,
     )
     .addTo(&map);
 
-    (map, topology_layer_group, position_layer_group)
+    (
+        map,
+        topology_layer_group,
+        position_layer_group,
+        notes_layer_group,
+    )
 }
 
 pub fn set_view(model: &Model) {
@@ -132,6 +145,22 @@ pub fn render_position(model: &Model) {
 
         topology_layer_group.addTo(&map);
         position_layer_group.addTo(&map);
+    }
+}
+
+pub fn render_notes(model: &Model) {
+    if let (Some(map), Some(notes_layer_group)) = (&model.map, &model.notes_layer_group) {
+        notes_layer_group.clearLayers();
+
+        for note in model.notes.iter() {
+            notes_layer_group.addLayer(&Marker::new(
+                &LatLng::from(&note.position),
+                &JsValue::from_serde(&MarkerOptions {})
+                    .expect("Unable to serialize polyline options"),
+            ));
+        }
+
+        notes_layer_group.addTo(&map);
     }
 }
 

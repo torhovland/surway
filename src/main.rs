@@ -1,9 +1,10 @@
 use bindings::GeolocationPosition;
 use cfg_if::cfg_if;
 use geo::{destination, BoundingBox, Coord};
+use js_sys::Date;
 use leaflet::{LayerGroup, Map};
 use log::{error, info, warn};
-use model::Model;
+use model::{Model, Note};
 use osm::OsmDocument;
 use rand::prelude::*;
 use seed::{fetch::StatusCategory, prelude::*, *};
@@ -15,13 +16,18 @@ mod map;
 mod model;
 mod osm;
 
+const NOTE_STORAGE_KEY: &str = "notes";
+
 enum Msg {
     DownloadOsmChunk,
     InvalidateMapSize,
+    NoteChanged(String),
     OsmFetched(fetch::Result<String>),
     Position(f64, f64),
     RandomWalk,
-    SetMap((Map, LayerGroup, LayerGroup)),
+    SaveNote,
+    SetMap((Map, LayerGroup, LayerGroup, LayerGroup)),
+    ToggleNoteMode,
 }
 
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
@@ -61,7 +67,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     orders.after_next_render(|_| Msg::SetMap(map::init())); // Cannot initialize Leaflet until the map element has rendered.
 
     if url.search().contains_key("random_walk") {
-        orders.stream(streams::interval(1000, || Msg::RandomWalk));
+        orders.stream(streams::interval(5000, || Msg::RandomWalk));
     }
 
     // Create a random start location, so we get to init the map even if geolocation isn't available.
@@ -75,11 +81,15 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         map: None,
         topology_layer_group: None,
         position_layer_group: None,
+        notes_layer_group: None,
         osm: OsmDocument::new(),
         position,
         osm_chunk_position: None,
         osm_chunk_radius: 500.0,
         osm_chunk_trigger_factor: 0.8,
+        note_mode: false,
+        notes: vec![],
+        new_note: "".into(),
     }
 }
 
@@ -115,6 +125,10 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             };
         }
 
+        Msg::NoteChanged(text) => {
+            model.new_note = text;
+        }
+
         Msg::OsmFetched(Ok(response_data)) => {
             model.osm = quick_xml::de::from_str(&response_data)
                 .expect("Unable to deserialize the OSM data");
@@ -147,12 +161,36 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             handle_new_position(model, orders);
         }
 
-        Msg::SetMap((map, topology_layer_group, position_layer_group)) => {
+        Msg::SaveNote => {
+            let note = Note {
+                datetime: Date::now(),
+                text: model.new_note.clone(),
+                position: model.position,
+            };
+
+            model.notes.push(note);
+            model.new_note = "".into();
+
+            LocalStorage::insert(NOTE_STORAGE_KEY, &model.notes)
+                .expect("Unable to save note to LocalStorage");
+
+            model.note_mode = !model.note_mode;
+
+            map::render_notes(&model);
+        }
+
+        Msg::SetMap((map, topology_layer_group, position_layer_group, notes_layer_group)) => {
             model.map = Some(map);
             model.topology_layer_group = Some(topology_layer_group);
             model.position_layer_group = Some(position_layer_group);
+            model.notes_layer_group = Some(notes_layer_group);
             map::set_view(&model);
             map::render_topology_and_position(&model);
+            map::render_notes(&model);
+        }
+
+        Msg::ToggleNoteMode => {
+            model.note_mode = !model.note_mode;
         }
     }
 }
@@ -171,7 +209,60 @@ fn handle_new_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
 }
 
 fn view(model: &Model) -> Node<Msg> {
-    div![C!["content"], div![id!["map"]], view_way(&model),]
+    div![
+        div![
+            C!["content"],
+            div![id!["map"],],
+            div![
+                C!["button-row"],
+                button!(
+                    C!["btn btn-primary"],
+                    "Take a note",
+                    ev(Ev::Click, |_| Msg::ToggleNoteMode),
+                )
+            ],
+            view_way(&model),
+        ],
+        div![
+            C![if model.note_mode {
+                "modal modal-lg active"
+            } else {
+                "modal"
+            }],
+            a![C!["modal-overlay"], attrs! {At::Href => "#"}],
+            div![
+                C!["modal-container"],
+                div![
+                    C!["modal-header"],
+                    a![
+                        C!["btn btn-clear float-right"],
+                        attrs! {At::Href => "#"},
+                        ev(Ev::Click, |_| Msg::ToggleNoteMode)
+                    ],
+                    div![C!["modal-title h5"], "Take a note"]
+                ],
+                textarea![
+                    attrs! {At::Value => model.new_note},
+                    input_ev(Ev::Input, Msg::NoteChanged)
+                ],
+                div![
+                    C!["modal-footer"],
+                    div![
+                        button![
+                            C!["btn btn-primary"],
+                            "Save",
+                            ev(Ev::Click, |_| Msg::SaveNote)
+                        ],
+                        button![
+                            C!["btn btn-link"],
+                            "Cancel",
+                            ev(Ev::Click, |_| Msg::ToggleNoteMode)
+                        ]
+                    ],
+                ],
+            ]
+        ]
+    ]
 }
 
 fn view_way(model: &Model) -> Node<Msg> {
