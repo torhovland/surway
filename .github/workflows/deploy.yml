@@ -10,11 +10,15 @@ jobs:
 
       - name: Test
         uses: docker://torhovland/rust-trunk:0.10.0
-        run: cargo test
+        with:
+          entrypoint: cargo
+          args: test
 
       - name: Build
         uses: docker://torhovland/rust-trunk:0.10.0
-        run: trunk --config Trunk-release.toml build
+        with:
+          entrypoint: trunk
+          args: --config Trunk-release.toml build
 
       - name: Get branch name
         if: github.event_name == 'pull_request'
