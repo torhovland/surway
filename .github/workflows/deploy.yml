@@ -3,16 +3,17 @@ on: push
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    container: torhovland/rust-trunk:0.10.0
     timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
       - name: Test
+        uses: docker://torhovland/rust-trunk:0.10.0
         run: cargo test
 
       - name: Build
+        uses: docker://torhovland/rust-trunk:0.10.0
         run: trunk --config Trunk-release.toml build
 
       - name: Get branch name
