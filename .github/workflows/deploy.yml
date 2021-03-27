@@ -31,19 +31,20 @@ jobs:
       - name: Cypress run
         uses: cypress-io/github-action@v2
         with:
+          project: ./cypress
           config: baseUrl=https://surway.hovland.xyz/$BRANCH_NAME
-          spec: cypress/**/*.js
+          spec: cypress/**/*.spec.js
 
       - name: Save test screenshots
         uses: actions/upload-artifact@v1
         if: failure()
         with:
           name: cypress-screenshots
-          path: cypress/screenshots
+          path: cypress/cypress/screenshots
 
       - name: Save test videos
         uses: actions/upload-artifact@v1
         if: always()
         with:
           name: cypress-videos
-          path: cypress/videos
+          path: cypress/cypress/videos
