@@ -1,6 +1,8 @@
 html,
 body {
     margin: 0;
+    font-family: "Noto Sans JP", apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+        sans-serif !important;
 }
 
 img.leaflet-tile {
@@ -23,9 +25,6 @@ ul {
     height: 100%;
     display: flex;
     flex-direction: column;
-    font-family: "Noto Sans JP", sans-serif;
-    font-size: 20px;
-    line-height: 30px;
 }
 
 #map {
@@ -67,12 +66,4 @@ ul {
 
 textarea {
     flex: 1;
-}
-
-// Landscape
-@media (min-aspect-ratio: 1/1) {
-    .content {
-        font-size: 16px;
-        line-height: 24px;
-    }
 }
