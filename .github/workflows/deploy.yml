@@ -4,6 +4,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     container: torhovland/rust-trunk:0.10.0
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -30,6 +31,7 @@ jobs:
 
       - name: Cypress run
         uses: cypress-io/github-action@v2
+        timeout-minutes: 5
         with:
           working-directory: cypress
           config: baseUrl=https://surway.hovland.xyz/$BRANCH_NAME
