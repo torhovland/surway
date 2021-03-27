@@ -31,7 +31,7 @@ jobs:
       - name: Cypress run
         uses: cypress-io/github-action@v2
         with:
-          project: ./cypress
+          working-directory: cypress
           config: baseUrl=https://surway.hovland.xyz/$BRANCH_NAME
           spec: cypress/**/*.spec.js
 
