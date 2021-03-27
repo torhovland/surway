@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "cypress:open": "cypress open -e baseUrl=https://surway.hovland.xyz",
-    "cypress:run": "cypress run -e baseUrl=https://surway.hovland.xyz"
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run"
   },
   "author": "",
   "license": "ISC",

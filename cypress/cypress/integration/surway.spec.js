@@ -13,7 +13,7 @@ export const setFakePosition = position => {
 
 context('Surway', () => {
   beforeEach(() => {
-    cy.visit(Cypress.env('baseUrl'), {
+    cy.visit('/', {
       onBeforeLoad() {
         setFakePosition({ latitude: 41.38879, longitude: 2.15899 });
       },

@@ -37,9 +37,10 @@ jobs:
       - name: Cypress run
         uses: cypress-io/github-action@v2
         timeout-minutes: 5
+        env:
+          CYPRESS_BASE_URL: https://surway.hovland.xyz/$BRANCH_NAME
         with:
           working-directory: cypress
-          config: baseUrl=https://surway.hovland.xyz/$BRANCH_NAME
           spec: cypress/**/*.spec.js
 
       - name: Save test screenshots
