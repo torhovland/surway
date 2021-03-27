@@ -14,11 +14,36 @@ jobs:
       - name: Build
         run: trunk --config Trunk-release.toml build
 
+      - name: Get branch name
+        if: github.event_name == 'pull_request'
+        run: echo "::set-env name=BRANCH_NAME::$(echo ${GITHUB_HEAD_REF})"
+
       - name: Deploy to GitHub Pages
-        if: success() && github.ref == 'refs/heads/main'
-        uses: crazy-max/ghaction-github-pages@v2
+        if: success()
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          build_dir: dist
-          fqdn: surway.hovland.xyz
-        env:
-          GITHUB_TOKEN: ${{ secrets.Deploy_PAT }}
+          personal_token: ${{ secrets.Deploy_PAT }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          cname: surway.hovland.xyz
+          publish_dir: ./dist
+          destination_dir: $BRANCH_NAME
+
+      - name: Cypress run
+        uses: cypress-io/github-action@v2
+        with:
+          config: baseUrl=https://surway.hovland.xyz/$BRANCH_NAME
+          spec: cypress/**/*.js
+
+      - name: Save test screenshots
+        uses: actions/upload-artifact@v1
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+
+      - name: Save test videos
+        uses: actions/upload-artifact@v1
+        if: always()
+        with:
+          name: cypress-videos
+          path: cypress/videos
