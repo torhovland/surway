@@ -20,9 +20,9 @@ jobs:
           entrypoint: trunk
           args: --config Trunk-release.toml build
 
-      - name: Get branch name
+      - name: Set branch name
         if: github.event_name == 'pull_request'
-        run: echo "::set-env name=BRANCH_NAME::$(echo ${GITHUB_HEAD_REF})"
+        run: echo "branch_name=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
 
       - name: Deploy to GitHub Pages
         if: success()
@@ -32,13 +32,13 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           cname: surway.hovland.xyz
           publish_dir: ./dist
-          destination_dir: $BRANCH_NAME
+          destination_dir: ${{ env.branch_name }}
 
       - name: Cypress run
         uses: cypress-io/github-action@v2
         timeout-minutes: 5
         env:
-          CYPRESS_BASE_URL: https://surway.hovland.xyz/$BRANCH_NAME
+          CYPRESS_BASE_URL: https://surway.hovland.xyz/${{ env.branch_name }}
         with:
           working-directory: cypress
           spec: cypress/**/*.spec.js
