@@ -35,4 +35,4 @@ The development progress of this app has been documented in [this blog series](h
 
 ## Contributing
 
-Issues and pull requests are welcome!
+Issues, discussions, and pull requests are welcome!
