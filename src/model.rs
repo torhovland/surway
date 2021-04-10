@@ -22,11 +22,12 @@ pub struct Model {
     pub new_note: String,
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Route {
     Main,
     EditNote,
-    ListNotes,
+    NewNote,
+    Notes,
 }
 
 #[derive(Serialize)]
@@ -74,7 +75,8 @@ impl From<Url> for Route {
     fn from(mut url: Url) -> Self {
         match url.remaining_hash_path_parts().as_slice() {
             ["edit-note"] => Self::EditNote,
-            ["list-notes"] => Self::ListNotes,
+            ["new-note"] => Self::NewNote,
+            ["notes"] => Self::Notes,
             _ => Self::Main,
         }
     }

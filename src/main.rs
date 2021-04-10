@@ -193,9 +193,9 @@ fn view(model: &Model) -> Node<Msg> {
                 a!(
                     C!["btn btn-primary"],
                     attrs! {
-                        At::Href => "#edit-note"
+                        At::Href => "#notes"
                     },
-                    "Take a note"
+                    "Notes"
                 )
             ],
             view_way(&model),
@@ -212,27 +212,67 @@ fn view(model: &Model) -> Node<Msg> {
                 div![
                     C!["modal-header"],
                     a![C!["btn btn-clear float-right"], attrs! {At::Href => "#"}],
-                    div![C!["modal-title h5"], "Take a note"]
+                    div![C!["modal-title h5"], route_title(model.route)]
                 ],
-                textarea![
-                    attrs! {At::Value => model.new_note},
-                    input_ev(Ev::Input, Msg::NoteChanged)
-                ],
-                div![
-                    C!["modal-footer"],
-                    div![
-                        a![
-                            C!["btn btn-primary"],
-                            attrs! {At::Href => "#"},
-                            "Save",
-                            ev(Ev::Click, |_| Msg::SaveNote)
-                        ],
-                        a![C!["btn btn-link"], attrs! {At::Href => "#"}, "Cancel",]
-                    ],
-                ],
+                view_modal(model)
             ]
         ]
     ]
+}
+
+fn view_modal(model: &Model) -> Node<Msg> {
+    match model.route {
+        Route::Main => div![],
+        Route::Notes => view_notes(model),
+        Route::EditNote => view_new_note(model),
+        Route::NewNote => view_new_note(model),
+    }
+}
+
+fn view_notes(model: &Model) -> Node<Msg> {
+    div![
+        C!["modal-body"],
+        "List",
+        div![
+            C!["modal-footer"],
+            div![a![
+                C!["btn btn-primary"],
+                attrs! {At::Href => "#new-note"},
+                "Take a note"
+            ]],
+        ]
+    ]
+}
+
+fn view_new_note(model: &Model) -> Node<Msg> {
+    div![
+        C!["modal-body"],
+        textarea![
+            attrs! {At::Value => model.new_note},
+            input_ev(Ev::Input, Msg::NoteChanged)
+        ],
+        div![
+            C!["modal-footer"],
+            div![
+                a![
+                    C!["btn btn-primary"],
+                    attrs! {At::Href => "#"},
+                    "Save",
+                    ev(Ev::Click, |_| Msg::SaveNote)
+                ],
+                a![C!["btn btn-link"], attrs! {At::Href => "#notes"}, "Cancel",]
+            ],
+        ]
+    ]
+}
+
+fn route_title(route: Route) -> &'static str {
+    match route {
+        Route::Main => "Main",
+        Route::Notes => "Notes",
+        Route::EditNote => "Edit note",
+        Route::NewNote => "Take a note",
+    }
 }
 
 fn view_way(model: &Model) -> Node<Msg> {

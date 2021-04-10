@@ -64,6 +64,12 @@ ul {
     height: 100%;
 }
 
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
 textarea {
     flex: 1;
 }
