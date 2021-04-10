@@ -30,6 +30,11 @@ enum Msg {
     ToggleNoteMode,
 }
 
+fn main() {
+    init_log();
+    App::start("app", init, update, view);
+}
+
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
 
@@ -90,25 +95,6 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         note_mode: false,
         notes: vec![],
         new_note: "".into(),
-    }
-}
-
-async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
-    let url = format!(
-        "https://overpass-api.de/api/interpreter?data=[bbox];way[highway];(._;>;);out;&bbox={},{},{},{}",
-        bbox.lower_left.lon, bbox.lower_left.lat, bbox.upper_right.lon, bbox.upper_right.lat
-    );
-
-    info!("Fetching query {}", url);
-
-    let response = Request::new(url).fetch().await.expect("OSM request failed");
-    let status = response.status();
-    let body = response.text().await.expect("Unable to get response text");
-
-    if status.category == StatusCategory::Success {
-        return Ok(body);
-    } else {
-        return Err(FetchError::StatusError(status));
     }
 }
 
@@ -193,19 +179,6 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.note_mode = !model.note_mode;
         }
     }
-}
-
-fn handle_new_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
-    map::pan_to_position(&model);
-    map::render_position(&model);
-
-    if model.is_outside_osm_trigger_box() {
-        model.osm_chunk_position = Some(model.position);
-        orders.send_msg(Msg::DownloadOsmChunk);
-    }
-
-    // Make sure the map is centered on our position even if the size of the map has changed
-    orders.after_next_render(|_| Msg::InvalidateMapSize);
 }
 
 fn view(model: &Model) -> Node<Msg> {
@@ -308,6 +281,38 @@ fn view_way(model: &Model) -> Node<Msg> {
     }
 }
 
+async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
+    let url = format!(
+        "https://overpass-api.de/api/interpreter?data=[bbox];way[highway];(._;>;);out;&bbox={},{},{},{}",
+        bbox.lower_left.lon, bbox.lower_left.lat, bbox.upper_right.lon, bbox.upper_right.lat
+    );
+
+    info!("Fetching query {}", url);
+
+    let response = Request::new(url).fetch().await.expect("OSM request failed");
+    let status = response.status();
+    let body = response.text().await.expect("Unable to get response text");
+
+    if status.category == StatusCategory::Success {
+        return Ok(body);
+    } else {
+        return Err(FetchError::StatusError(status));
+    }
+}
+
+fn handle_new_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
+    map::pan_to_position(&model);
+    map::render_position(&model);
+
+    if model.is_outside_osm_trigger_box() {
+        model.osm_chunk_position = Some(model.position);
+        orders.send_msg(Msg::DownloadOsmChunk);
+    }
+
+    // Make sure the map is centered on our position even if the size of the map has changed
+    orders.after_next_render(|_| Msg::InvalidateMapSize);
+}
+
 cfg_if! {
     if #[cfg(debug_assertions)] {
         fn init_log() {
@@ -317,9 +322,4 @@ cfg_if! {
     } else {
         fn init_log() {}
     }
-}
-
-fn main() {
-    init_log();
-    App::start("app", init, update, view);
 }
