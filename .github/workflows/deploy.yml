@@ -1,9 +1,10 @@
 on: push
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    outputs:
+      status: ${{ steps.early.conclusion }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -22,12 +23,17 @@ jobs:
         env:
           RUSTFLAGS: --cfg=web_sys_unstable_apis
 
+  deploy:
+    needs: build
+    if: needs.build.outputs.status == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
       - name: Set branch name
         if: github.event_name == 'pull_request'
         run: echo "branch_name=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
 
       - name: Deploy to GitHub Pages
-        if: success()
         uses: peaceiris/actions-gh-pages@v3
         with:
           personal_token: ${{ secrets.Deploy_PAT }}
