@@ -9,13 +9,13 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Test
-        uses: docker://torhovland/rust-trunk:0.10.0
+        uses: docker://torhovland/rust-trunk:0.10.1
         with:
           entrypoint: cargo
           args: test
 
       - name: Build
-        uses: docker://torhovland/rust-trunk:0.10.0
+        uses: docker://torhovland/rust-trunk:0.10.1
         with:
           entrypoint: trunk
           args: --config Trunk-release.toml build
