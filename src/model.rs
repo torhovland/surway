@@ -1,4 +1,5 @@
 use leaflet::{LayerGroup, Map};
+use seed::Url;
 use serde::Serialize;
 
 use crate::{
@@ -7,6 +8,7 @@ use crate::{
 };
 
 pub struct Model {
+    pub route: Route,
     pub map: Option<Map>,
     pub topology_layer_group: Option<LayerGroup>,
     pub position_layer_group: Option<LayerGroup>,
@@ -16,9 +18,15 @@ pub struct Model {
     pub osm_chunk_position: Option<Coord>,
     pub osm_chunk_radius: f64,
     pub osm_chunk_trigger_factor: f64,
-    pub note_mode: bool,
     pub notes: Vec<Note>,
     pub new_note: String,
+}
+
+#[derive(PartialEq)]
+pub enum Route {
+    Main,
+    EditNote,
+    ListNotes,
 }
 
 #[derive(Serialize)]
@@ -59,5 +67,15 @@ impl Model {
             .iter()
             .map(|way| way.find_nearest_point(&self.position, &self.osm))
             .collect()
+    }
+}
+
+impl From<Url> for Route {
+    fn from(mut url: Url) -> Self {
+        match url.remaining_hash_path_parts().as_slice() {
+            ["edit-note"] => Self::EditNote,
+            ["list-notes"] => Self::ListNotes,
+            _ => Self::Main,
+        }
     }
 }

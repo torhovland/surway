@@ -4,7 +4,7 @@ use geo::{destination, BoundingBox, Coord};
 use js_sys::Date;
 use leaflet::{LayerGroup, Map};
 use log::{error, info, warn};
-use model::{Model, Note};
+use model::{Model, Note, Route};
 use osm::OsmDocument;
 use rand::prelude::*;
 use seed::{fetch::StatusCategory, prelude::*, *};
@@ -19,6 +19,7 @@ mod osm;
 const NOTE_STORAGE_KEY: &str = "notes";
 
 enum Msg {
+    UrlChanged(subs::UrlChanged),
     DownloadOsmChunk,
     InvalidateMapSize,
     NoteChanged(String),
@@ -27,7 +28,6 @@ enum Msg {
     RandomWalk,
     SaveNote,
     SetMap((Map, LayerGroup, LayerGroup, LayerGroup)),
-    ToggleNoteMode,
 }
 
 fn main() {
@@ -69,8 +69,12 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
 
     geo_callback_function.forget();
 
-    orders.after_next_render(|_| Msg::SetMap(map::init())); // Cannot initialize Leaflet until the map element has rendered.
+    orders
+        .subscribe(Msg::UrlChanged) // Handle route changes.
+        .notify(subs::UrlChanged(url.clone())) // Handle initial route.
+        .after_next_render(|_| Msg::SetMap(map::init())); // Cannot initialize Leaflet until the map element has rendered.
 
+    // TODO: Handle like any other route
     if url.search().contains_key("random_walk") {
         orders.stream(streams::interval(5000, || Msg::RandomWalk));
     }
@@ -83,6 +87,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     };
 
     Model {
+        route: Route::from(url),
         map: None,
         topology_layer_group: None,
         position_layer_group: None,
@@ -92,7 +97,6 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         osm_chunk_position: None,
         osm_chunk_radius: 500.0,
         osm_chunk_trigger_factor: 0.8,
-        note_mode: false,
         notes: vec![],
         new_note: "".into(),
     }
@@ -100,6 +104,10 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
+        Msg::UrlChanged(subs::UrlChanged(url)) => {
+            model.route = Route::from(url);
+        }
+
         Msg::DownloadOsmChunk => {
             let bbox = model.position.bbox(model.osm_chunk_radius);
             orders.perform_cmd(async move { Msg::OsmFetched(send_osm_request(&bbox).await) });
@@ -160,8 +168,6 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             LocalStorage::insert(NOTE_STORAGE_KEY, &model.notes)
                 .expect("Unable to save note to LocalStorage");
 
-            model.note_mode = !model.note_mode;
-
             map::render_notes(&model);
         }
 
@@ -174,10 +180,6 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             map::render_topology_and_position(&model);
             map::render_notes(&model);
         }
-
-        Msg::ToggleNoteMode => {
-            model.note_mode = !model.note_mode;
-        }
     }
 }
 
@@ -188,16 +190,18 @@ fn view(model: &Model) -> Node<Msg> {
             div![id!["map"],],
             div![
                 C!["button-row"],
-                button!(
+                a!(
                     C!["btn btn-primary"],
-                    "Take a note",
-                    ev(Ev::Click, |_| Msg::ToggleNoteMode),
+                    attrs! {
+                        At::Href => "#edit-note"
+                    },
+                    "Take a note"
                 )
             ],
             view_way(&model),
         ],
         div![
-            C![if model.note_mode {
+            C![if model.route != Route::Main {
                 "modal modal-lg active"
             } else {
                 "modal"
@@ -207,11 +211,7 @@ fn view(model: &Model) -> Node<Msg> {
                 C!["modal-container"],
                 div![
                     C!["modal-header"],
-                    a![
-                        C!["btn btn-clear float-right"],
-                        attrs! {At::Href => "#"},
-                        ev(Ev::Click, |_| Msg::ToggleNoteMode)
-                    ],
+                    a![C!["btn btn-clear float-right"], attrs! {At::Href => "#"}],
                     div![C!["modal-title h5"], "Take a note"]
                 ],
                 textarea![
@@ -221,16 +221,13 @@ fn view(model: &Model) -> Node<Msg> {
                 div![
                     C!["modal-footer"],
                     div![
-                        button![
+                        a![
                             C!["btn btn-primary"],
+                            attrs! {At::Href => "#"},
                             "Save",
                             ev(Ev::Click, |_| Msg::SaveNote)
                         ],
-                        button![
-                            C!["btn btn-link"],
-                            "Cancel",
-                            ev(Ev::Click, |_| Msg::ToggleNoteMode)
-                        ]
+                        a![C!["btn btn-link"], attrs! {At::Href => "#"}, "Cancel",]
                     ],
                 ],
             ]
@@ -293,7 +290,7 @@ async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
     let status = response.status();
     let body = response.text().await.expect("Unable to get response text");
 
-    if status.category == StatusCategory::Success {
+    if status.category == fetch::StatusCategory::Success {
         return Ok(body);
     } else {
         return Err(FetchError::StatusError(status));
