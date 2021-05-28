@@ -13,7 +13,7 @@ log = "0.4.14"
 quick-xml = { version = "0.22.0", features = ["serialize"] }
 rand = "0.8.3"
 seed = "0.8.0"
-serde = "1.0.125"
+serde = "1.0.126"
 wasm-bindgen-futures = { git = "https://github.com/torhovland/wasm-bindgen.git", branch = "screen-wake-lock", package = "wasm-bindgen-futures" }
 web-sys-wake-lock = { git = "https://github.com/torhovland/wasm-bindgen.git", branch = "screen-wake-lock", package = "web-sys", features = ["console", "Geolocation", "HtmlAnchorElement", "Navigator", "PositionOptions", "WakeLock", "WakeLockType", "WakeLockSentinel", "Window"] }
 
