@@ -10,7 +10,7 @@ The development progress of this app has been documented in [this blog series](h
 
 - Shows nearby OSM ways on a map.
 - Shows OSM tags for the way nearest you.
-- Being able to write a note geo-located at your current position (useful for later editing).
+- Editor for notes geo-located at your current position (useful for later editing).
 
 ### Planned features
 
@@ -20,6 +20,8 @@ The development progress of this app has been documented in [this blog series](h
     - Geo-located notes
     - GPX tracks
     - Points of interest (POI)
+
+- Turn map position tracking on/off, including auto off when panning.
 
 - Being able to add a geo-located note or POI anywhere on the map.
 
@@ -32,6 +34,8 @@ The development progress of this app has been documented in [this blog series](h
 - Configurable alerts, e.g.
     - When you are no longer near a way.
     - When a major road is missing a name.
+
+- Choosing between north up/head up.
 
 ## Contributing
 
