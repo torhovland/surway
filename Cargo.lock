@@ -67,9 +67,9 @@ dependencies = [
 
 [[package]]
 name = "const_fn"
-version = "0.4.6"
+version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "076a6803b0dacd6a88cfe64deba628b01533ff5ef265687e6938280c1afd0a28"
+checksum = "402da840495de3f976eaefc3485b7f5eb5b0bf9761f9a47be27fe975b3b8c2ec"
 
 [[package]]
 name = "cookie"
@@ -291,8 +291,7 @@ checksum = "dd25036021b0de88a0aff6b850051563c6516d0bf53f8638938edbb9de732736"
 [[package]]
 name = "js-sys"
 version = "0.3.50"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d99f9e3e84b8f67f846ef5b4cbbc3b1c29f6c759fcbce6f01aa0e73d932a24c"
+source = "git+https://github.com/torhovland/wasm-bindgen.git?branch=screen-wake-lock#881d7366a03a952bca8489077ab3bf211b757338"
 dependencies = [
  "wasm-bindgen",
 ]
@@ -306,7 +305,7 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 [[package]]
 name = "leaflet"
 version = "0.1.2"
-source = "git+https://github.com/torhovland/leaflet-rs.git#605541dd016cf4bbf9b82815a79c7821c58bc73b"
+source = "git+https://github.com/torhovland/leaflet-rs.git#3c79302ac289e04cc8ed56e7c905b0cd966a456c"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
@@ -315,9 +314,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.93"
+version = "0.2.94"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9385f66bf6105b241aa65a61cb923ef20efc665cb9f9bb50ac2f0c4b7f378d41"
+checksum = "18794a8ad5b29321f790b55d93dfba91e125cb1a9edbd4f8e3150acc771c1a5e"
 
 [[package]]
 name = "log"
@@ -538,7 +537,7 @@ dependencies = [
  "uuid",
  "version_check 0.9.3",
  "wasm-bindgen",
- "wasm-bindgen-futures",
+ "wasm-bindgen-futures 0.4.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "web-sys",
 ]
 
@@ -596,9 +595,9 @@ checksum = "2579985fda508104f7587689507983eadd6a6e84dd35d6d115361f530916fa0d"
 
 [[package]]
 name = "slab"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
+checksum = "f173ac3d1a7e3b28003f40de0b5ce7fe2710f9b9dc3fc38664cebee46b3b6527"
 
 [[package]]
 name = "standback"
@@ -665,20 +664,22 @@ dependencies = [
  "assert_approx_eq",
  "cfg-if 1.0.0",
  "console_log",
+ "gloo-events",
  "leaflet",
  "log",
  "quick-xml",
  "rand 0.8.3",
  "seed",
  "serde",
+ "wasm-bindgen-futures 0.4.23 (git+https://github.com/torhovland/wasm-bindgen.git?branch=screen-wake-lock)",
  "web-sys",
 ]
 
 [[package]]
 name = "syn"
-version = "1.0.69"
+version = "1.0.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48fe99c6bd8b1cc636890bcc071842de909d902c81ac7dab53ba33c421ab8ffb"
+checksum = "ad184cc9470f9117b2ac6817bfe297307418819ba40552f9b3846f05c33d5373"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -740,9 +741,9 @@ checksum = "9337591893a19b88d8d87f2cec1e73fad5cdfd10e5a6f349f498ad6ea2ffb1e3"
 
 [[package]]
 name = "unicode-xid"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7fe0bb3479651439c9112f72b6c505038574c9fbb575ed1bf3b797fa39dd564"
+checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
 
 [[package]]
 name = "uuid"
@@ -780,8 +781,7 @@ checksum = "fd6fbd9a79829dd1ad0cc20627bf1ed606756a7f77edff7b66b7064f9cb327c6"
 [[package]]
 name = "wasm-bindgen"
 version = "0.2.73"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83240549659d187488f91f33c0f8547cbfef0b2088bc470c116d1d260ef623d9"
+source = "git+https://github.com/torhovland/wasm-bindgen.git?branch=screen-wake-lock#881d7366a03a952bca8489077ab3bf211b757338"
 dependencies = [
  "cfg-if 1.0.0",
  "serde",
@@ -792,8 +792,7 @@ dependencies = [
 [[package]]
 name = "wasm-bindgen-backend"
 version = "0.2.73"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae70622411ca953215ca6d06d3ebeb1e915f0f6613e3b495122878d7ebec7dae"
+source = "git+https://github.com/torhovland/wasm-bindgen.git?branch=screen-wake-lock#881d7366a03a952bca8489077ab3bf211b757338"
 dependencies = [
  "bumpalo",
  "lazy_static",
@@ -802,6 +801,17 @@ dependencies = [
  "quote",
  "syn",
  "wasm-bindgen-shared",
+]
+
+[[package]]
+name = "wasm-bindgen-futures"
+version = "0.4.23"
+source = "git+https://github.com/torhovland/wasm-bindgen.git?branch=screen-wake-lock#881d7366a03a952bca8489077ab3bf211b757338"
+dependencies = [
+ "cfg-if 1.0.0",
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -819,8 +829,7 @@ dependencies = [
 [[package]]
 name = "wasm-bindgen-macro"
 version = "0.2.73"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e734d91443f177bfdb41969de821e15c516931c3c3db3d318fa1b68975d0f6f"
+source = "git+https://github.com/torhovland/wasm-bindgen.git?branch=screen-wake-lock#881d7366a03a952bca8489077ab3bf211b757338"
 dependencies = [
  "quote",
  "wasm-bindgen-macro-support",
@@ -829,8 +838,7 @@ dependencies = [
 [[package]]
 name = "wasm-bindgen-macro-support"
 version = "0.2.73"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d53739ff08c8a68b0fdbcd54c372b8ab800b1449ab3c9d706503bc7dd1621b2c"
+source = "git+https://github.com/torhovland/wasm-bindgen.git?branch=screen-wake-lock#881d7366a03a952bca8489077ab3bf211b757338"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -842,14 +850,12 @@ dependencies = [
 [[package]]
 name = "wasm-bindgen-shared"
 version = "0.2.73"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9a543ae66aa233d14bb765ed9af4a33e81b8b58d1584cf1b47ff8cd0b9e4489"
+source = "git+https://github.com/torhovland/wasm-bindgen.git?branch=screen-wake-lock#881d7366a03a952bca8489077ab3bf211b757338"
 
 [[package]]
 name = "web-sys"
 version = "0.3.50"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a905d57e488fec8861446d3393670fb50d27a262344013181c2cdf9fff5481be"
+source = "git+https://github.com/torhovland/wasm-bindgen.git?branch=screen-wake-lock#881d7366a03a952bca8489077ab3bf211b757338"
 dependencies = [
  "js-sys",
  "wasm-bindgen",

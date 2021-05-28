@@ -8,7 +8,7 @@ use model::{Model, Note};
 use osm::OsmDocument;
 use rand::prelude::*;
 use seed::{fetch::StatusCategory, prelude::*, *};
-use web_sys::PositionOptions;
+use web_sys_wake_lock::PositionOptions;
 
 mod bindings;
 mod geo;
@@ -33,7 +33,7 @@ enum Msg {
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
 
-    let geolocation = web_sys::window()
+    let geolocation = web_sys_wake_lock::window()
         .expect("Unable to get browser window.")
         .navigator()
         .geolocation()
