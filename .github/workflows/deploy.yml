@@ -25,11 +25,6 @@ jobs:
         env:
           RUSTFLAGS: --cfg=web_sys_unstable_apis
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
       - name: Set branch name
         if: github.event_name == 'pull_request'
         run: echo "branch_name=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
