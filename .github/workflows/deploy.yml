@@ -27,7 +27,6 @@ jobs:
 
   deploy:
     needs: build
-    if: needs.build.outputs.status == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
