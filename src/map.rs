@@ -8,9 +8,9 @@ use js_sys::{Array, Function};
 use leaflet::{
     Circle, Control, LatLng, LatLngBounds, LayerGroup, Map, Marker, Polyline, Rectangle, TileLayer,
 };
-use seed::{prelude::*, window};
+use seed::{prelude::*, spawn_local, window};
 use serde::{Deserialize, Serialize};
-use web_sys_wake_lock::{console, Element, HtmlAnchorElement};
+use web_sys_wake_lock::{console, Element, WakeLockSentinel};
 
 #[derive(Serialize, Deserialize)]
 #[allow(non_snake_case)]
@@ -219,19 +219,25 @@ fn add_wake_lock_control(map: &Map) {
         link.set_inner_html("⬤");
         link.set_title("Create a new foobar.");
 
-        let on_click = EventListener::new(&link, "click", async |_| {
+        let on_click = EventListener::new(&link, "click", |_| {
             let wake_lock = web_sys_wake_lock::window()
                 .expect("Unable to get browser window.")
                 .navigator()
                 .wake_lock();
 
             let promise = wake_lock.request(web_sys_wake_lock::WakeLockType::Screen);
-            let result = wasm_bindgen_futures::JsFuture::from(promise)
-                .await
-                .expect("Unable to convert promise.");
+            let future = wasm_bindgen_futures::JsFuture::from(promise);
+            // .await
+            // .expect("Unable to convert promise.");
 
-            console::log_1(&"Control button click.".into());
-            console::log_1(result.into());
+            spawn_local(async {
+                let result = future.await.expect("Unable to get wake lock result.");
+                let sentinel: WakeLockSentinel = JsCast::unchecked_into(result);
+
+                console::log_1(&"Control button click.".into());
+                console::log_1(&format!("{:?}", sentinel.released()).into());
+                console::log_1(&sentinel);
+            }); //.expect("Unable to get wake lock result.");
         });
 
         on_click.forget();

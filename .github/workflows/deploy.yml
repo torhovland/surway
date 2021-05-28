@@ -19,6 +19,8 @@ jobs:
         with:
           entrypoint: trunk
           args: --config Trunk-release.toml build
+        env:
+          RUSTFLAGS: --cfg=web_sys_unstable_apis
 
       - name: Set branch name
         if: github.event_name == 'pull_request'
