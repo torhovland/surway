@@ -229,7 +229,7 @@ fn view_modal(model: &Model) -> Node<Msg> {
     }
 }
 
-fn view_notes(model: &Model) -> Node<Msg> {
+fn view_notes(_model: &Model) -> Node<Msg> {
     div![
         C!["modal-body"],
         "List",
