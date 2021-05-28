@@ -216,7 +216,7 @@ fn add_wake_lock_control(map: &Map) {
             .expect("Unable to cast to HtmlAnchorElement");
 
         link.set_href("#");
-        link.set_inner_html("⬤");
+        link.set_inner_html("<div class='icon-control-container'><img src='icons/brightness.svg' class='icon-control' /></div>");
         link.set_title("Create a new foobar.");
 
         let on_click = EventListener::new(&link, "click", |_| {
