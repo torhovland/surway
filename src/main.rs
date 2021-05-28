@@ -7,7 +7,7 @@ use log::{error, info, warn};
 use model::{Model, Note, Route};
 use osm::OsmDocument;
 use rand::prelude::*;
-use seed::{fetch::StatusCategory, prelude::*, *};
+use seed::{prelude::*, *};
 use web_sys_wake_lock::PositionOptions;
 
 mod bindings;
