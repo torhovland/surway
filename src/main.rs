@@ -29,6 +29,7 @@ enum Msg {
     RandomWalk,
     SaveNote,
     SetMap((Map, LayerGroup, LayerGroup, LayerGroup)),
+    FlipWakeLock,
     KeepWakeLockSentinel(WakeLockSentinel),
 }
 
@@ -73,9 +74,9 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
 
     let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
 
-    let wake_lock_callback = move |sentinel| {
+    let wake_lock_callback = move || {
         console::log_1(&"Wake lock callback.".into());
-        app.update(msg_mapper(Msg::KeepWakeLockSentinel(sentinel)));
+        app.update(msg_mapper(Msg::FlipWakeLock));
     };
 
     orders
@@ -191,7 +192,35 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             map::render_notes(&model);
         }
 
-        Msg::KeepWakeLockSentinel(sentinel) => model.wake_lock_sentinel = Some(sentinel),
+        Msg::FlipWakeLock => {
+            if let Some(sentinel) = &model.wake_lock_sentinel {
+                let _promise = sentinel.release();
+                model.wake_lock_sentinel = None;
+                info!("Wake lock sentinel released.");
+            } else {
+                let wake_lock = web_sys_wake_lock::window()
+                    .expect("Unable to get browser window.")
+                    .navigator()
+                    .wake_lock();
+
+                let promise = wake_lock.request(web_sys_wake_lock::WakeLockType::Screen);
+                let future = wasm_bindgen_futures::JsFuture::from(promise);
+
+                orders.skip().perform_cmd({
+                    async {
+                        let result = future.await.expect("Unable to get wake lock result.");
+                        let sentinel: WakeLockSentinel = JsCast::unchecked_into(result);
+
+                        info!("Wake lock saved.");
+                        Msg::KeepWakeLockSentinel(sentinel)
+                    }
+                });
+            }
+        }
+
+        Msg::KeepWakeLockSentinel(sentinel) => {
+            model.wake_lock_sentinel = Some(sentinel);
+        }
     }
 }
 

@@ -8,9 +8,9 @@ use js_sys::{Array, Function};
 use leaflet::{
     Circle, Control, LatLng, LatLngBounds, LayerGroup, Map, Marker, Polyline, Rectangle, TileLayer,
 };
-use seed::{prelude::*, spawn_local, window};
+use seed::{prelude::*, window};
 use serde::{Deserialize, Serialize};
-use web_sys_wake_lock::{console, Element, WakeLockSentinel};
+use web_sys_wake_lock::Element;
 
 #[derive(Serialize, Deserialize)]
 #[allow(non_snake_case)]
@@ -40,7 +40,7 @@ struct ControlProps {
 
 pub fn init<F>(wake_lock_callback: F) -> (Map, LayerGroup, LayerGroup, LayerGroup)
 where
-    F: Fn(WakeLockSentinel) + 'static + Clone,
+    F: Fn() + 'static + Clone,
 {
     let map = Map::new("map", &JsValue::NULL);
 
@@ -54,7 +54,6 @@ where
     notes_layer_group.addTo(&map);
 
     add_wake_lock_control(&map, wake_lock_callback);
-    add_wake_lock_control_2(&map);
 
     TileLayer::new(
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -197,7 +196,7 @@ fn bbox(position: &Coord, radius: f64) -> LatLngBounds {
 
 fn add_wake_lock_control<F>(map: &Map, wake_lock_callback: F)
 where
-    F: Fn(WakeLockSentinel) + 'static + Clone,
+    F: Fn() + 'static + Clone,
 {
     //let wl_callback = wake_lock_callback.clone();
 
@@ -231,28 +230,7 @@ where
         link.set_title("Create a new foobar.");
 
         let on_click = EventListener::new(&link, "click", move |_| {
-            let wake_lock = web_sys_wake_lock::window()
-                .expect("Unable to get browser window.")
-                .navigator()
-                .wake_lock();
-
-            let promise = wake_lock.request(web_sys_wake_lock::WakeLockType::Screen);
-            let future = wasm_bindgen_futures::JsFuture::from(promise);
-            // .await
-            // .expect("Unable to convert promise.");
-
-            let wl2_callback = wl_callback.clone();
-
-            spawn_local(async move {
-                let result = future.await.expect("Unable to get wake lock result.");
-                let sentinel: WakeLockSentinel = JsCast::unchecked_into(result);
-
-                wl2_callback(sentinel);
-
-                console::log_1(&"Control button click.".into());
-                // console::log_1(&format!("{:?}", sentinel.released()).into());
-                // console::log_1(&sentinel);
-            }); //.expect("Unable to get wake lock result.");
+            wl_callback();
         });
 
         on_click.forget();
@@ -265,93 +243,6 @@ where
     });
 
     let on_add_closure = Closure::once(on_add as Box<dyn FnOnce() -> Element>);
-
-    js_sys::Reflect::set(&props, &JsValue::from("onAdd"), on_add_closure.as_ref())
-        .expect("Unable to set onAdd()");
-
-    on_add_closure.forget();
-
-    let control_class = Control::extend(&props)
-        .dyn_into::<Function>()
-        .expect("Unable to cast to Function");
-
-    let control_button: Control = JsCast::unchecked_into(
-        js_sys::Reflect::construct(&control_class, &Array::new())
-            .expect("Unable to run constructor"),
-    );
-
-    control_button.addTo(&map);
-}
-
-fn add_wake_lock_control_2(map: &Map) {
-    let props = JsValue::from_serde(&ControlProps {
-        options: ControlOptions {
-            position: "topleft".into(),
-        },
-    })
-    .expect("Unable to serialize control props");
-
-    // This callback must return a HTML div representing the control button.
-    let on_add = move || {
-        let document = window().document().expect("Unable to get browser document");
-
-        let container = document
-            .create_element("div")
-            .expect("Unable to create div");
-
-        container.set_class_name("leaflet-bar");
-
-        let link = document
-            .create_element("a")
-            .expect("Unable to create link")
-            .dyn_into::<web_sys_wake_lock::HtmlAnchorElement>()
-            .expect("Unable to cast to HtmlAnchorElement");
-
-        link.set_href("#");
-        link.set_inner_html("<div class='icon-control-container'><img src='icons/brightness.svg' class='icon-control' /></div>");
-        link.set_title("Create a new foobar.");
-
-        let on_click = EventListener::new(&link, "click", |_| {
-            let wake_lock = web_sys_wake_lock::window()
-                .expect("Unable to get browser window.")
-                .navigator()
-                .wake_lock();
-
-            let promise = wake_lock.request(web_sys_wake_lock::WakeLockType::Screen);
-            let future = wasm_bindgen_futures::JsFuture::from(promise);
-            // .await
-            // .expect("Unable to convert promise.");
-
-            spawn_local(async {
-                let result = future.await.expect("Unable to get wake lock result.");
-                let sentinel: WakeLockSentinel = JsCast::unchecked_into(result);
-                let release_promise = sentinel.release();
-                let release_future = wasm_bindgen_futures::JsFuture::from(release_promise);
-
-                console::log_1(&"Control button 2 click.".into());
-                console::log_1(&format!("{:?}", sentinel.released()).into());
-                console::log_1(&sentinel);
-
-                spawn_local(async {
-                    let _result = release_future
-                        .await
-                        .expect("Unable to get wake lock release result.");
-
-                    console::log_1(&"Wake lock released.".into());
-                }); //.expect("Unable to get wake lock result.");
-            }); //.expect("Unable to get wake lock result.");
-        });
-
-        on_click.forget();
-
-        container
-            .append_child(&link)
-            .expect("Unable to add child element");
-
-        container
-    };
-
-    let on_add_closure = Closure::wrap(Box::new(on_add) as Box<dyn FnMut() -> Element>);
 
     js_sys::Reflect::set(&props, &JsValue::from("onAdd"), on_add_closure.as_ref())
         .expect("Unable to set onAdd()");
