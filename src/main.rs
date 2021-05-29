@@ -8,7 +8,7 @@ use model::{Model, Note, Route};
 use osm::OsmDocument;
 use rand::prelude::*;
 use seed::{prelude::*, *};
-use web_sys::WakeLockSentinel;
+use web_sys::{WakeLock, WakeLockSentinel};
 use web_sys_wake_lock::{console, PositionOptions};
 
 mod bindings;
@@ -74,9 +74,13 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
 
     let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
 
-    let wake_lock_callback = move || {
-        console::log_1(&"Wake lock callback.".into());
-        app.update(msg_mapper(Msg::FlipWakeLock));
+    let wake_lock_callback = if is_wake_lock_supported() {
+        Some(move || {
+            console::log_1(&"Wake lock callback.".into());
+            app.update(msg_mapper(Msg::FlipWakeLock));
+        })
+    } else {
+        None
     };
 
     orders
@@ -198,30 +202,18 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 model.wake_lock_sentinel = None;
                 info!("Wake lock sentinel released.");
             } else {
-                let wake_lock = web_sys_wake_lock::window()
-                    .expect("Unable to get browser window.")
-                    .navigator()
-                    .wake_lock();
+                let promise = wake_lock().request(web_sys_wake_lock::WakeLockType::Screen);
+                let future = wasm_bindgen_futures::JsFuture::from(promise);
 
-                let wake_lock_test: JsValue = JsCast::unchecked_into(wake_lock.clone());
-                if wake_lock_test == JsValue::UNDEFINED {
-                    warn!("Wake lock is not supported on this browser.");
-                } else {
-                    info!("Wake lock supported.");
+                orders.skip().perform_cmd({
+                    async {
+                        let result = future.await.expect("Unable to get wake lock result.");
+                        let sentinel: WakeLockSentinel = JsCast::unchecked_into(result);
 
-                    let promise = wake_lock.request(web_sys_wake_lock::WakeLockType::Screen);
-                    let future = wasm_bindgen_futures::JsFuture::from(promise);
-
-                    orders.skip().perform_cmd({
-                        async {
-                            let result = future.await.expect("Unable to get wake lock result.");
-                            let sentinel: WakeLockSentinel = JsCast::unchecked_into(result);
-
-                            info!("Wake lock saved.");
-                            Msg::KeepWakeLockSentinel(sentinel)
-                        }
-                    });
-                }
+                        info!("Wake lock saved.");
+                        Msg::KeepWakeLockSentinel(sentinel)
+                    }
+                });
             }
         }
 
@@ -396,6 +388,18 @@ fn handle_new_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
 
     // Make sure the map is centered on our position even if the size of the map has changed
     orders.after_next_render(|_| Msg::InvalidateMapSize);
+}
+
+fn wake_lock() -> WakeLock {
+    web_sys_wake_lock::window()
+        .expect("Unable to get browser window.")
+        .navigator()
+        .wake_lock()
+}
+
+fn is_wake_lock_supported() -> bool {
+    let wake_lock_test: JsValue = JsCast::unchecked_into(wake_lock());
+    wake_lock_test != JsValue::UNDEFINED
 }
 
 cfg_if! {

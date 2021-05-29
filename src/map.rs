@@ -38,7 +38,7 @@ struct ControlProps {
     options: ControlOptions,
 }
 
-pub fn init<F>(wake_lock_callback: F) -> (Map, LayerGroup, LayerGroup, LayerGroup)
+pub fn init<F>(wake_lock_callback: Option<F>) -> (Map, LayerGroup, LayerGroup, LayerGroup)
 where
     F: Fn() + 'static + Clone,
 {
@@ -53,7 +53,9 @@ where
     let notes_layer_group = LayerGroup::new();
     notes_layer_group.addTo(&map);
 
-    add_wake_lock_control(&map, wake_lock_callback);
+    if let Some(callback) = wake_lock_callback {
+        add_wake_lock_control(&map, callback);
+    }
 
     TileLayer::new(
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
