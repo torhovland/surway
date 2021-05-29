@@ -15,12 +15,12 @@ rand = "0.8.3"
 seed = "0.8.0"
 serde = "1.0.126"
 wasm-bindgen-futures = { git = "https://github.com/torhovland/wasm-bindgen.git", branch = "screen-wake-lock", package = "wasm-bindgen-futures" }
-web-sys-wake-lock = { git = "https://github.com/torhovland/wasm-bindgen.git", branch = "screen-wake-lock", package = "web-sys", features = ["console", "Geolocation", "HtmlAnchorElement", "Navigator", "PositionOptions", "WakeLock", "WakeLockType", "WakeLockSentinel", "Window"] }
+web-sys-wake-lock = { git = "https://github.com/torhovland/wasm-bindgen.git", branch = "screen-wake-lock", package = "web-sys", features = ["console", "DomTokenList", "Element", "Geolocation", "HtmlAnchorElement", "Navigator", "PositionOptions", "WakeLock", "WakeLockType", "WakeLockSentinel", "Window"] }
 
 [patch.crates-io]
 js-sys = { git = "https://github.com/torhovland/wasm-bindgen.git", branch = "screen-wake-lock", package = "js-sys" }
 wasm-bindgen = { git = "https://github.com/torhovland/wasm-bindgen.git", branch = "screen-wake-lock", package = "wasm-bindgen" }
-web-sys = { git = "https://github.com/torhovland/wasm-bindgen.git", branch = "screen-wake-lock", package = "web-sys", features = ["console", "Geolocation", "HtmlAnchorElement", "Navigator", "PositionOptions", "WakeLock", "WakeLockType", "WakeLockSentinel", "Window"] }
+web-sys = { git = "https://github.com/torhovland/wasm-bindgen.git", branch = "screen-wake-lock", package = "web-sys", features = ["console", "DomTokenList", "Element", "Geolocation", "HtmlAnchorElement", "Navigator", "PositionOptions", "WakeLock", "WakeLockType", "WakeLockSentinel", "Window"] }
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"

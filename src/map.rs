@@ -228,8 +228,8 @@ where
             .expect("Unable to cast to HtmlAnchorElement");
 
         link.set_href("#");
-        link.set_inner_html("<div class='icon-control-container'><img src='icons/brightness.svg' class='icon-control' /></div>");
-        link.set_title("Create a new foobar.");
+        link.set_inner_html("<div id='wake-lock-control-container' class='icon-control-container'><img src='icons/brightness.svg' class='icon-control' /></div>");
+        link.set_title("Keep screen on.");
 
         let on_click = EventListener::new(&link, "click", move |_| {
             wl_callback();

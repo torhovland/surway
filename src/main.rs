@@ -8,7 +8,7 @@ use model::{Model, Note, Route};
 use osm::OsmDocument;
 use rand::prelude::*;
 use seed::{prelude::*, *};
-use web_sys::{WakeLock, WakeLockSentinel};
+use web_sys::{Document, WakeLock, WakeLockSentinel, Window};
 use web_sys_wake_lock::{console, PositionOptions};
 
 mod bindings;
@@ -39,8 +39,7 @@ fn main() {
 }
 
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
-    let geolocation = web_sys_wake_lock::window()
-        .expect("Unable to get browser window.")
+    let geolocation = window()
         .navigator()
         .geolocation()
         .expect("Unable to get geolocation.");
@@ -200,6 +199,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             if let Some(sentinel) = &model.wake_lock_sentinel {
                 let _promise = sentinel.release();
                 model.wake_lock_sentinel = None;
+                flip_wake_lock_icon();
                 info!("Wake lock sentinel released.");
             } else {
                 let promise = wake_lock().request(web_sys_wake_lock::WakeLockType::Screen);
@@ -209,6 +209,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                     async {
                         let result = future.await.expect("Unable to get wake lock result.");
                         let sentinel: WakeLockSentinel = JsCast::unchecked_into(result);
+                        flip_wake_lock_icon();
 
                         info!("Wake lock saved.");
                         Msg::KeepWakeLockSentinel(sentinel)
@@ -390,16 +391,44 @@ fn handle_new_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
     orders.after_next_render(|_| Msg::InvalidateMapSize);
 }
 
+fn window() -> Window {
+    web_sys_wake_lock::window().expect("Unable to get browser window.")
+}
+
+fn document() -> Document {
+    window()
+        .document()
+        .expect("Unable to get browser document.")
+}
+
 fn wake_lock() -> WakeLock {
-    web_sys_wake_lock::window()
-        .expect("Unable to get browser window.")
-        .navigator()
-        .wake_lock()
+    window().navigator().wake_lock()
 }
 
 fn is_wake_lock_supported() -> bool {
     let wake_lock_test: JsValue = JsCast::unchecked_into(wake_lock());
     wake_lock_test != JsValue::UNDEFINED
+}
+
+fn flip_wake_lock_icon() {
+    let css_class = "icon-control-container-enabled";
+
+    let class_list = document()
+        .get_element_by_id("wake-lock-control-container")
+        .expect("Unable to get wake lock control container.")
+        .dyn_into::<web_sys::Element>()
+        .expect("Unable to get wake lock Element.")
+        .class_list();
+
+    if class_list.contains(css_class) {
+        class_list
+            .remove_1(css_class)
+            .expect("Unable to remove class to wake lock Element.");
+    } else {
+        class_list
+            .add_1(css_class)
+            .expect("Unable to add class to wake lock Element.");
+    }
 }
 
 cfg_if! {
