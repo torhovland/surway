@@ -1,6 +1,7 @@
 use leaflet::{LayerGroup, Map};
 use seed::Url;
 use serde::Serialize;
+use web_sys_wake_lock::WakeLockSentinel;
 
 use crate::{
     geo::Coord,
@@ -20,6 +21,7 @@ pub struct Model {
     pub osm_chunk_trigger_factor: f64,
     pub notes: Vec<Note>,
     pub new_note: String,
+    pub wake_lock_sentinel: Option<WakeLockSentinel>,
 }
 
 #[derive(Clone, Copy, PartialEq)]

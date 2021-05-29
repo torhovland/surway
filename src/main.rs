@@ -8,7 +8,8 @@ use model::{Model, Note, Route};
 use osm::OsmDocument;
 use rand::prelude::*;
 use seed::{prelude::*, *};
-use web_sys_wake_lock::PositionOptions;
+use web_sys::WakeLockSentinel;
+use web_sys_wake_lock::{console, PositionOptions};
 
 mod bindings;
 mod geo;
@@ -28,6 +29,7 @@ enum Msg {
     RandomWalk,
     SaveNote,
     SetMap((Map, LayerGroup, LayerGroup, LayerGroup)),
+    KeepWakeLockSentinel(WakeLockSentinel),
 }
 
 fn main() {
@@ -36,13 +38,13 @@ fn main() {
 }
 
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
-    let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
-
     let geolocation = web_sys_wake_lock::window()
         .expect("Unable to get browser window.")
         .navigator()
         .geolocation()
         .expect("Unable to get geolocation.");
+
+    let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
 
     let geo_callback = move |position: JsValue| {
         let pos: GeolocationPosition = position.into();
@@ -69,10 +71,17 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
 
     geo_callback_function.forget();
 
+    let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
+
+    let wake_lock_callback = move |sentinel| {
+        console::log_1(&"Wake lock callback.".into());
+        app.update(msg_mapper(Msg::KeepWakeLockSentinel(sentinel)));
+    };
+
     orders
         .subscribe(Msg::UrlChanged) // Handle route changes.
         .notify(subs::UrlChanged(url.clone())) // Handle initial route.
-        .after_next_render(|_| Msg::SetMap(map::init())); // Cannot initialize Leaflet until the map element has rendered.
+        .after_next_render(move |_| Msg::SetMap(map::init(wake_lock_callback))); // Cannot initialize Leaflet until the map element has rendered.
 
     // TODO: Handle like any other route
     if url.search().contains_key("random_walk") {
@@ -99,6 +108,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         osm_chunk_trigger_factor: 0.8,
         notes: vec![],
         new_note: "".into(),
+        wake_lock_sentinel: None,
     }
 }
 
@@ -180,6 +190,8 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             map::render_topology_and_position(&model);
             map::render_notes(&model);
         }
+
+        Msg::KeepWakeLockSentinel(sentinel) => model.wake_lock_sentinel = Some(sentinel),
     }
 }
 

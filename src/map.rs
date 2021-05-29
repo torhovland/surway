@@ -38,7 +38,10 @@ struct ControlProps {
     options: ControlOptions,
 }
 
-pub fn init() -> (Map, LayerGroup, LayerGroup, LayerGroup) {
+pub fn init<F>(wake_lock_callback: F) -> (Map, LayerGroup, LayerGroup, LayerGroup)
+where
+    F: Fn(WakeLockSentinel) + 'static + Clone,
+{
     let map = Map::new("map", &JsValue::NULL);
 
     let topology_layer_group = LayerGroup::new();
@@ -50,7 +53,7 @@ pub fn init() -> (Map, LayerGroup, LayerGroup, LayerGroup) {
     let notes_layer_group = LayerGroup::new();
     notes_layer_group.addTo(&map);
 
-    add_wake_lock_control(&map);
+    add_wake_lock_control(&map, wake_lock_callback);
     add_wake_lock_control_2(&map);
 
     TileLayer::new(
@@ -192,7 +195,12 @@ fn bbox(position: &Coord, radius: f64) -> LatLngBounds {
     )
 }
 
-fn add_wake_lock_control(map: &Map) {
+fn add_wake_lock_control<F>(map: &Map, wake_lock_callback: F)
+where
+    F: Fn(WakeLockSentinel) + 'static + Clone,
+{
+    //let wl_callback = wake_lock_callback.clone();
+
     let props = JsValue::from_serde(&ControlProps {
         options: ControlOptions {
             position: "topleft".into(),
@@ -200,8 +208,10 @@ fn add_wake_lock_control(map: &Map) {
     })
     .expect("Unable to serialize control props");
 
+    let wl_callback = wake_lock_callback.clone();
+
     // This callback must return a HTML div representing the control button.
-    let on_add = move || {
+    let on_add: Box<dyn FnOnce() -> Element> = Box::new(|| {
         let document = window().document().expect("Unable to get browser document");
 
         let container = document
@@ -220,7 +230,7 @@ fn add_wake_lock_control(map: &Map) {
         link.set_inner_html("<div class='icon-control-container'><img src='icons/brightness.svg' class='icon-control' /></div>");
         link.set_title("Create a new foobar.");
 
-        let on_click = EventListener::new(&link, "click", |_| {
+        let on_click = EventListener::new(&link, "click", move |_| {
             let wake_lock = web_sys_wake_lock::window()
                 .expect("Unable to get browser window.")
                 .navigator()
@@ -231,13 +241,17 @@ fn add_wake_lock_control(map: &Map) {
             // .await
             // .expect("Unable to convert promise.");
 
-            spawn_local(async {
+            let wl2_callback = wl_callback.clone();
+
+            spawn_local(async move {
                 let result = future.await.expect("Unable to get wake lock result.");
                 let sentinel: WakeLockSentinel = JsCast::unchecked_into(result);
 
+                wl2_callback(sentinel);
+
                 console::log_1(&"Control button click.".into());
-                console::log_1(&format!("{:?}", sentinel.released()).into());
-                console::log_1(&sentinel);
+                // console::log_1(&format!("{:?}", sentinel.released()).into());
+                // console::log_1(&sentinel);
             }); //.expect("Unable to get wake lock result.");
         });
 
@@ -248,9 +262,9 @@ fn add_wake_lock_control(map: &Map) {
             .expect("Unable to add child element");
 
         container
-    };
+    });
 
-    let on_add_closure = Closure::wrap(Box::new(on_add) as Box<dyn FnMut() -> Element>);
+    let on_add_closure = Closure::once(on_add as Box<dyn FnOnce() -> Element>);
 
     js_sys::Reflect::set(&props, &JsValue::from("onAdd"), on_add_closure.as_ref())
         .expect("Unable to set onAdd()");
