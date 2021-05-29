@@ -203,18 +203,25 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                     .navigator()
                     .wake_lock();
 
-                let promise = wake_lock.request(web_sys_wake_lock::WakeLockType::Screen);
-                let future = wasm_bindgen_futures::JsFuture::from(promise);
+                let wake_lock_test: JsValue = JsCast::unchecked_into(wake_lock.clone());
+                if wake_lock_test == JsValue::UNDEFINED {
+                    warn!("Wake lock is not supported on this browser.");
+                } else {
+                    info!("Wake lock supported.");
 
-                orders.skip().perform_cmd({
-                    async {
-                        let result = future.await.expect("Unable to get wake lock result.");
-                        let sentinel: WakeLockSentinel = JsCast::unchecked_into(result);
+                    let promise = wake_lock.request(web_sys_wake_lock::WakeLockType::Screen);
+                    let future = wasm_bindgen_futures::JsFuture::from(promise);
 
-                        info!("Wake lock saved.");
-                        Msg::KeepWakeLockSentinel(sentinel)
-                    }
-                });
+                    orders.skip().perform_cmd({
+                        async {
+                            let result = future.await.expect("Unable to get wake lock result.");
+                            let sentinel: WakeLockSentinel = JsCast::unchecked_into(result);
+
+                            info!("Wake lock saved.");
+                            Msg::KeepWakeLockSentinel(sentinel)
+                        }
+                    });
+                }
             }
         }
 
