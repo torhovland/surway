@@ -28,6 +28,7 @@ context('Surway', () => {
 
   describe('Note-taking', () => {
     it('can record a note', () => {
+      cy.contains('Notes').click();
       cy.contains('Take a note').click();
       cy.get('textarea').type("Foobar");
       cy.contains('Save').click().should(() => {
