@@ -200,16 +200,12 @@ fn add_wake_lock_control<F>(map: &Map, wake_lock_callback: F)
 where
     F: Fn() + 'static + Clone,
 {
-    //let wl_callback = wake_lock_callback.clone();
-
     let props = JsValue::from_serde(&ControlProps {
         options: ControlOptions {
             position: "topleft".into(),
         },
     })
     .expect("Unable to serialize control props");
-
-    let wl_callback = wake_lock_callback.clone();
 
     // This callback must return a HTML div representing the control button.
     let on_add: Box<dyn FnOnce() -> Element> = Box::new(|| {
@@ -232,7 +228,7 @@ where
         link.set_title("Keep screen on.");
 
         let on_click = EventListener::new(&link, "click", move |_| {
-            wl_callback();
+            wake_lock_callback();
         });
 
         on_click.forget();

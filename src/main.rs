@@ -9,7 +9,7 @@ use osm::OsmDocument;
 use rand::prelude::*;
 use seed::{prelude::*, *};
 use web_sys::{Document, WakeLock, WakeLockSentinel, Window};
-use web_sys_wake_lock::{console, PositionOptions};
+use web_sys_wake_lock::PositionOptions;
 
 mod bindings;
 mod geo;
@@ -39,43 +39,12 @@ fn main() {
 }
 
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
-    let geolocation = window()
-        .navigator()
-        .geolocation()
-        .expect("Unable to get geolocation.");
-
-    let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
-
-    let geo_callback = move |position: JsValue| {
-        let pos: GeolocationPosition = position.into();
-        let coords = pos.coords();
-
-        app.update(msg_mapper(Msg::Position(
-            coords.latitude(),
-            coords.longitude(),
-        )));
-    };
-
-    let geo_callback_function = Closure::wrap(Box::new(geo_callback) as Box<dyn FnMut(JsValue)>);
-
-    let mut options = PositionOptions::new();
-    options.enable_high_accuracy(true);
-
-    geolocation
-        .watch_position_with_error_callback_and_options(
-            geo_callback_function.as_ref().unchecked_ref(),
-            None,
-            &options,
-        )
-        .expect("Unable to get position.");
-
-    geo_callback_function.forget();
+    init_geolocation(orders);
 
     let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
 
     let wake_lock_callback = if is_wake_lock_supported() {
         Some(move || {
-            console::log_1(&"Wake lock callback.".into());
             app.update(msg_mapper(Msg::FlipWakeLock));
         })
     } else {
@@ -200,18 +169,18 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 let _promise = sentinel.release();
                 model.wake_lock_sentinel = None;
                 flip_wake_lock_icon();
-                info!("Wake lock sentinel released.");
             } else {
-                let promise = wake_lock().request(web_sys_wake_lock::WakeLockType::Screen);
-                let future = wasm_bindgen_futures::JsFuture::from(promise);
-
                 orders.skip().perform_cmd({
                     async {
-                        let result = future.await.expect("Unable to get wake lock result.");
-                        let sentinel: WakeLockSentinel = JsCast::unchecked_into(result);
-                        flip_wake_lock_icon();
+                        let sentinel: WakeLockSentinel = JsCast::unchecked_into(
+                            wasm_bindgen_futures::JsFuture::from(
+                                wake_lock().request(web_sys_wake_lock::WakeLockType::Screen),
+                            )
+                            .await
+                            .expect("Unable to get wake lock result."),
+                        );
 
-                        info!("Wake lock saved.");
+                        flip_wake_lock_icon();
                         Msg::KeepWakeLockSentinel(sentinel)
                     }
                 });
@@ -399,6 +368,40 @@ fn document() -> Document {
     window()
         .document()
         .expect("Unable to get browser document.")
+}
+
+fn init_geolocation(orders: &mut impl Orders<Msg>) {
+    let geolocation = window()
+        .navigator()
+        .geolocation()
+        .expect("Unable to get geolocation.");
+
+    let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
+
+    let geo_callback = move |position: JsValue| {
+        let pos: GeolocationPosition = position.into();
+        let coords = pos.coords();
+
+        app.update(msg_mapper(Msg::Position(
+            coords.latitude(),
+            coords.longitude(),
+        )));
+    };
+
+    let geo_callback_function = Closure::wrap(Box::new(geo_callback) as Box<dyn FnMut(JsValue)>);
+
+    let mut options = PositionOptions::new();
+    options.enable_high_accuracy(true);
+
+    geolocation
+        .watch_position_with_error_callback_and_options(
+            geo_callback_function.as_ref().unchecked_ref(),
+            None,
+            &options,
+        )
+        .expect("Unable to get position.");
+
+    geo_callback_function.forget();
 }
 
 fn wake_lock() -> WakeLock {
