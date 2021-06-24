@@ -9,6 +9,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Install WASM target
+        uses: docker://torhovland/rust-trunk:0.11.0
+        with:
+          entrypoint: rustup
+          args: target add wasm32-unknown-unknown
+
       - name: Test
         uses: docker://torhovland/rust-trunk:0.11.0
         with:
