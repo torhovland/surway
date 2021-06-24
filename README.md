@@ -37,6 +37,12 @@ The development progress of this app has been documented in [this blog series](h
 
 - Choosing between north up/head up.
 
+## Building and running
+
+```
+RUSTFLAGS=--cfg=web_sys_unstable_apis trunk serve      
+```
+
 ## Contributing
 
 Issues, discussions, and pull requests are welcome!
