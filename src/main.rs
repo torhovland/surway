@@ -341,9 +341,9 @@ async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
     let body = response.text().await.expect("Unable to get response text");
 
     if status.category == fetch::StatusCategory::Success {
-        return Ok(body);
+        Ok(body)
     } else {
-        return Err(FetchError::StatusError(status));
+        Err(FetchError::StatusError(status))
     }
 }
 
