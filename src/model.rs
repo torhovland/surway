@@ -1,7 +1,7 @@
 use leaflet::{LayerGroup, Map};
 use seed::Url;
 use serde::Serialize;
-use web_sys_wake_lock::WakeLockSentinel;
+use web_sys::WakeLockSentinel;
 
 use crate::{
     geo::Coord,

@@ -8,8 +8,7 @@ use model::{Model, Note, Route};
 use osm::OsmDocument;
 use rand::prelude::*;
 use seed::{prelude::*, *};
-use web_sys::{Document, WakeLock, WakeLockSentinel, Window};
-use web_sys_wake_lock::PositionOptions;
+use web_sys::{Element, PositionOptions, WakeLock, WakeLockSentinel, WakeLockType};
 
 mod bindings;
 mod geo;
@@ -174,7 +173,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                     async {
                         let sentinel: WakeLockSentinel = JsCast::unchecked_into(
                             wasm_bindgen_futures::JsFuture::from(
-                                wake_lock().request(web_sys_wake_lock::WakeLockType::Screen),
+                                wake_lock().request(WakeLockType::Screen),
                             )
                             .await
                             .expect("Unable to get wake lock result."),
@@ -360,16 +359,6 @@ fn handle_new_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
     orders.after_next_render(|_| Msg::InvalidateMapSize);
 }
 
-fn window() -> Window {
-    web_sys_wake_lock::window().expect("Unable to get browser window.")
-}
-
-fn document() -> Document {
-    window()
-        .document()
-        .expect("Unable to get browser document.")
-}
-
 fn init_geolocation(orders: &mut impl Orders<Msg>) {
     let geolocation = window()
         .navigator()
@@ -419,7 +408,7 @@ fn flip_wake_lock_icon() {
     let class_list = document()
         .get_element_by_id("wake-lock-control-container")
         .expect("Unable to get wake lock control container.")
-        .dyn_into::<web_sys::Element>()
+        .dyn_into::<Element>()
         .expect("Unable to get wake lock Element.")
         .class_list();
 

@@ -540,7 +540,7 @@ dependencies = [
  "uuid",
  "version_check 0.9.3",
  "wasm-bindgen",
- "wasm-bindgen-futures 0.4.23 (registry+https://github.com/rust-lang/crates.io-index)",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 
@@ -674,7 +674,6 @@ dependencies = [
  "rand 0.8.4",
  "seed",
  "serde",
- "wasm-bindgen-futures 0.4.23 (git+https://github.com/torhovland/wasm-bindgen.git?branch=screen-wake-lock)",
  "web-sys",
 ]
 
@@ -811,17 +810,6 @@ name = "wasm-bindgen-futures"
 version = "0.4.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81b8b767af23de6ac18bf2168b690bed2902743ddf0fb39252e36f9e2bfc63ea"
-dependencies = [
- "cfg-if 1.0.0",
- "js-sys",
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
-name = "wasm-bindgen-futures"
-version = "0.4.23"
-source = "git+https://github.com/torhovland/wasm-bindgen.git?branch=screen-wake-lock#c26b8d5c0aaf7a1af71f64ee16871624aa38f369"
 dependencies = [
  "cfg-if 1.0.0",
  "js-sys",

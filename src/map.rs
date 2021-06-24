@@ -3,6 +3,7 @@ use crate::{
     osm::OsmNode,
     Model,
 };
+use ::web_sys::{Element, HtmlAnchorElement};
 use gloo_events::EventListener;
 use js_sys::{Array, Function};
 use leaflet::{
@@ -10,7 +11,6 @@ use leaflet::{
 };
 use seed::{prelude::*, window};
 use serde::{Deserialize, Serialize};
-use web_sys_wake_lock::Element;
 
 #[derive(Serialize, Deserialize)]
 #[allow(non_snake_case)]
@@ -220,7 +220,7 @@ where
         let link = document
             .create_element("a")
             .expect("Unable to create link")
-            .dyn_into::<web_sys_wake_lock::HtmlAnchorElement>()
+            .dyn_into::<HtmlAnchorElement>()
             .expect("Unable to cast to HtmlAnchorElement");
 
         link.set_href("#");
