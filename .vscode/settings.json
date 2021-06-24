@@ -11,5 +11,6 @@
     ],
     "rust-analyzer.server.extraEnv": {
         "RUSTFLAGS": "--cfg=web_sys_unstable_apis"
-    }
+    },
+    "rust-analyzer.cargo.target": "wasm32-unknown-unknown"
 }
