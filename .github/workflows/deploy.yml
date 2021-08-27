@@ -21,7 +21,7 @@ jobs:
         uses: docker://torhovland/rust-trunk:0.13.1
         with:
           entrypoint: /bin/bash
-          args: rustup target add wasm32-unknown-unknown && trunk --config Trunk-release.toml build
+          args: -c "rustup target add wasm32-unknown-unknown && trunk --config Trunk-release.toml build"
         env:
           RUSTFLAGS: --cfg=web_sys_unstable_apis
 
