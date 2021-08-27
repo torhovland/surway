@@ -1,4 +1,4 @@
-FROM rust:1.53-slim
+FROM rust:1.54-slim
 RUN apt-get -y update && \
     apt-get -y install \
     binaryen \
@@ -7,6 +7,5 @@ RUN apt-get -y update && \
     libssl-dev \
     pkg-config && \
     rm -rf /var/lib/apt/lists/* && \ 
-    cargo install wasm-bindgen-cli --version 0.2.74 && \
-    cargo install trunk --version 0.11.0 && \
+    cargo install trunk --version 0.13.1 && \
     rm -rf /usr/local/cargo/registry
