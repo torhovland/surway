@@ -1,9 +1,9 @@
 use crate::osm::{OsmDocument, OsmNode, OsmWay};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 const R: f64 = 6371008.8; // mean Earth radius
 
-#[derive(Clone, Copy, Debug, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub struct Coord {
     pub lat: f64,
     pub lon: f64,

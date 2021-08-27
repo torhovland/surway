@@ -78,7 +78,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         osm_chunk_position: None,
         osm_chunk_radius: 500.0,
         osm_chunk_trigger_factor: 0.8,
-        notes: vec![],
+        notes: LocalStorage::get(NOTE_STORAGE_KEY).expect("Unable to read notes from LocalStorage"),
         new_note: "".into(),
         wake_lock_sentinel: None,
     }
@@ -238,10 +238,10 @@ fn view_modal(model: &Model) -> Node<Msg> {
     }
 }
 
-fn view_notes(_model: &Model) -> Node<Msg> {
+fn view_notes(model: &Model) -> Node<Msg> {
     div![
         C!["modal-body"],
-        "List",
+        model.notes.iter().map(|note| div![note.text.to_string()]),
         div![
             C!["modal-footer"],
             div![a![

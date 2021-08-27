@@ -1,6 +1,6 @@
 use leaflet::{LayerGroup, Map};
 use seed::Url;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use web_sys::WakeLockSentinel;
 
 use crate::{
@@ -32,7 +32,7 @@ pub enum Route {
     Notes,
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Note {
     pub datetime: f64,
     pub text: String,
