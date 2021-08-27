@@ -23,6 +23,11 @@ jobs:
           entrypoint: rustup
           args: target add wasm32-unknown-unknown
 
+      - name: Install WASM target
+        uses: actions-rs/toolchain@v1
+        with:
+          target: wasm32-unknown-unknown
+
       - name: Build
         uses: docker://torhovland/rust-trunk:0.13.1
         with:
