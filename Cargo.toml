@@ -14,12 +14,7 @@ quick-xml = { version = "0.22.0", features = ["serialize"] }
 rand = "0.8.4"
 seed = "0.8.0"
 serde = "1.0.126"
-web-sys = { git = "https://github.com/torhovland/wasm-bindgen.git", branch = "screen-wake-lock", package = "web-sys", features = ["DomTokenList", "Element", "Geolocation", "HtmlAnchorElement", "Navigator", "PositionOptions", "WakeLock", "WakeLockType", "WakeLockSentinel"] }
-
-[patch.crates-io]
-js-sys = { git = "https://github.com/torhovland/wasm-bindgen.git", branch = "screen-wake-lock", package = "js-sys" }
-wasm-bindgen = { git = "https://github.com/torhovland/wasm-bindgen.git", branch = "screen-wake-lock", package = "wasm-bindgen" }
-web-sys = { git = "https://github.com/torhovland/wasm-bindgen.git", branch = "screen-wake-lock", package = "web-sys" }
+web-sys = { version="0.3.53", features = ["DomTokenList", "Element", "Geolocation", "HtmlAnchorElement", "Navigator", "PositionOptions", "WakeLock", "WakeLockType", "WakeLockSentinel"] }
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
