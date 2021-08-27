@@ -9,19 +9,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Build
-        uses: docker://torhovland/rust-trunk:0.13.1.1
-        with:
-          entrypoint: trunk
-          args: --config Trunk-release.toml build
-        env:
-          RUSTFLAGS: --cfg=web_sys_unstable_apis
-
       - name: Test
-        uses: docker://torhovland/rust-trunk:0.13.1.1
+        uses: docker://torhovland/rust-trunk:0.13.1
         with:
           entrypoint: cargo
           args: test --target x86_64-unknown-linux-gnu
+        env:
+          RUSTFLAGS: --cfg=web_sys_unstable_apis
+
+      - name: Build
+        uses: docker://torhovland/rust-trunk:0.13.1
+        with:
+          entrypoint: /bin/bash
+          args: rustup target add wasm32-unknown-unknown && trunk --config Trunk-release.toml build
         env:
           RUSTFLAGS: --cfg=web_sys_unstable_apis
 
