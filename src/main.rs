@@ -78,7 +78,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         osm_chunk_position: None,
         osm_chunk_radius: 500.0,
         osm_chunk_trigger_factor: 0.8,
-        notes: LocalStorage::get(NOTE_STORAGE_KEY).expect("Unable to read notes from LocalStorage"),
+        notes: LocalStorage::get(NOTE_STORAGE_KEY).unwrap_or_default(),
         new_note: "".into(),
         wake_lock_sentinel: None,
     }
