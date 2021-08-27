@@ -9,6 +9,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Install native target for tests
+        uses: docker://torhovland/rust-trunk:0.13.1
+        with:
+          entrypoint: rustup
+          args: target add x86_64-unknown-linux-gnu
+
       - name: Install WASM target
         uses: docker://torhovland/rust-trunk:0.13.1
         with:
@@ -19,7 +25,7 @@ jobs:
         uses: docker://torhovland/rust-trunk:0.13.1
         with:
           entrypoint: cargo
-          args: test
+          args: test --target x86_64-unknown-linux-gnu
         env:
           RUSTFLAGS: --cfg=web_sys_unstable_apis
 
