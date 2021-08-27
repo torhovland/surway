@@ -173,11 +173,7 @@ pub fn render_notes(model: &Model) {
         notes_layer_group.clearLayers();
 
         for note in model.notes.iter() {
-            notes_layer_group.addLayer(&Marker::new(
-                &LatLng::from(&note.position),
-                &JsValue::from_serde(&MarkerOptions {})
-                    .expect("Unable to serialize polyline options"),
-            ));
+            notes_layer_group.addLayer(&Marker::new(&LatLng::from(&note.position)));
         }
 
         notes_layer_group.addTo(&map);
