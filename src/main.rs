@@ -241,7 +241,19 @@ fn view_modal(model: &Model) -> Node<Msg> {
 fn view_notes(model: &Model) -> Node<Msg> {
     div![
         C!["modal-body"],
-        model.notes.iter().map(|note| div![note.text.to_string()]),
+        model.notes.iter().map(|note| div![
+            C!["tile"],
+            div![
+                C!["tile-content"],
+                p![C!["tile-title"], note.text.to_string()],
+                small![C!["tile-subtitle text-gray"], note.datetime.to_string()],
+            ],
+            div![
+                C!["tile-action"],
+                div![a![C!["btn"], attrs! {At::Href => "#edit-note"}, "Edit"]],
+                div![a![C!["btn"], attrs! {At::Href => "#delete-note"}, "Delete"]],
+            ],
+        ]),
         div![
             C!["modal-footer"],
             div![a![
