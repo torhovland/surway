@@ -9,30 +9,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Test
-        uses: docker://torhovland/rust-trunk:0.13.1
-        with:
-          entrypoint: cargo
-          args: test --target x86_64-unknown-linux-gnu
-        env:
-          RUSTFLAGS: --cfg=web_sys_unstable_apis
-
-      - name: Install WASM target
-        uses: docker://torhovland/rust-trunk:0.13.1
-        with:
-          entrypoint: rustup
-          args: target add wasm32-unknown-unknown
-
-      - name: Install WASM target
-        uses: actions-rs/toolchain@v1
-        with:
-          target: wasm32-unknown-unknown
-
       - name: Build
-        uses: docker://torhovland/rust-trunk:0.13.1
+        uses: docker://torhovland/rust-trunk:0.13.1.1
         with:
           entrypoint: trunk
           args: --config Trunk-release.toml build
+        env:
+          RUSTFLAGS: --cfg=web_sys_unstable_apis
+
+      - name: Test
+        uses: docker://torhovland/rust-trunk:0.13.1.1
+        with:
+          entrypoint: cargo
+          args: test --target x86_64-unknown-linux-gnu
         env:
           RUSTFLAGS: --cfg=web_sys_unstable_apis
 
