@@ -14,7 +14,7 @@ quick-xml = { version = "0.22.0", features = ["serialize"] }
 rand = "0.8.4"
 seed = "0.8.0"
 serde = "1.0.129"
-web-sys = { version = "0.3.53", features = ["DomTokenList", "Element", "Geolocation", "HtmlAnchorElement", "Navigator", "PositionOptions", "WakeLock", "WakeLockType", "WakeLockSentinel"] }
+web-sys = { version = "0.3.54", features = ["DomTokenList", "Element", "Geolocation", "HtmlAnchorElement", "Navigator", "PositionOptions", "WakeLock", "WakeLockType", "WakeLockSentinel"] }
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
