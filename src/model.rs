@@ -1,4 +1,5 @@
 use leaflet::{LayerGroup, Map};
+use log::info;
 use seed::Url;
 use serde::{Deserialize, Serialize};
 use web_sys::WakeLockSentinel;
@@ -8,6 +9,7 @@ use crate::{
     osm::{OsmDocument, OsmWay},
 };
 
+#[derive(Debug)]
 pub struct Model {
     pub route: Route,
     pub map: Option<Map>,
@@ -20,19 +22,20 @@ pub struct Model {
     pub osm_chunk_radius: f64,
     pub osm_chunk_trigger_factor: f64,
     pub notes: Vec<Note>,
-    pub new_note: String,
+    pub draft_note_position: Option<Coord>,
+    pub draft_note_text: String,
     pub wake_lock_sentinel: Option<WakeLockSentinel>,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Route {
     Main,
-    EditNote,
+    EditNote(f64),
     NewNote,
     Notes,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Note {
     pub datetime: f64,
     pub text: String,
@@ -75,10 +78,19 @@ impl Model {
 
 impl From<Url> for Route {
     fn from(mut url: Url) -> Self {
-        match url.remaining_hash_path_parts().as_slice() {
-            ["edit-note"] => Self::EditNote,
-            ["new-note"] => Self::NewNote,
-            ["notes"] => Self::Notes,
+        let datetime = url
+            .search()
+            .get("dt")
+            .and_then(|vec| vec.iter().next())
+            .map(|s| s.parse::<f64>());
+
+        let hash_part = url.remaining_hash_path_parts();
+        info!("URL hash part: {:?}", hash_part.as_slice());
+
+        match (hash_part.as_slice(), datetime) {
+            (["edit-note"], Some(Ok(dt))) => Self::EditNote(dt),
+            (["new-note"], _) => Self::NewNote,
+            (["notes"], _) => Self::Notes,
             _ => Self::Main,
         }
     }

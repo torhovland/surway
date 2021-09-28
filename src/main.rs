@@ -3,7 +3,7 @@ use cfg_if::cfg_if;
 use geo::{destination, BoundingBox, Coord};
 use js_sys::Date;
 use leaflet::{LayerGroup, Map};
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use model::{Model, Note, Route};
 use osm::OsmDocument;
 use rand::prelude::*;
@@ -79,7 +79,8 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         osm_chunk_radius: 500.0,
         osm_chunk_trigger_factor: 0.8,
         notes: LocalStorage::get(NOTE_STORAGE_KEY).unwrap_or_default(),
-        new_note: "".into(),
+        draft_note_position: None,
+        draft_note_text: "".into(),
         wake_lock_sentinel: None,
     }
 }
@@ -87,7 +88,14 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::UrlChanged(subs::UrlChanged(url)) => {
-            model.route = Route::from(url);
+            debug!("URL changed to: {}", url);
+            let route = Route::from(url);
+            model.route = route;
+            debug!("Route changed to: {:?}", route);
+
+            if let Route::EditNote(_) = model.route {
+                model.draft_note_text = current_note(model).text.clone();
+            }
         }
 
         Msg::DownloadOsmChunk => {
@@ -102,7 +110,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
 
         Msg::NoteChanged(text) => {
-            model.new_note = text;
+            model.draft_note_text = text;
         }
 
         Msg::OsmFetched(Ok(response_data)) => {
@@ -138,14 +146,36 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
 
         Msg::SaveNote => {
-            let note = Note {
-                datetime: Date::now(),
-                text: model.new_note.clone(),
-                position: model.position,
+            let existing_datetime = if let Route::EditNote(dt) = model.route {
+                Some(dt)
+            } else {
+                None
             };
 
-            model.notes.push(note);
-            model.new_note = "".into();
+            let mut new_note = Note {
+                position: model
+                    .draft_note_position
+                    .expect("No draft position has been set."),
+                text: model.draft_note_text.clone(),
+                datetime: Date::now(),
+            };
+
+            if let Some(dt) = existing_datetime {
+                if let Some(existing_note) = model.notes.iter().find(|note| note.datetime == dt) {
+                    new_note.datetime = existing_note.datetime;
+                    model.notes.retain(|note| note.datetime != dt);
+
+                    // Note {
+                    //     position: model
+                    //         .draft_note_position
+                    //         .expect("No draft position has been set."),
+                    //     text: model.draft_note_text.clone(),
+                    //     datetime: dt,
+                    // }
+                }
+            };
+
+            model.notes.push(new_note);
 
             LocalStorage::insert(NOTE_STORAGE_KEY, &model.notes)
                 .expect("Unable to save note to LocalStorage");
@@ -233,27 +263,37 @@ fn view_modal(model: &Model) -> Node<Msg> {
     match model.route {
         Route::Main => div![],
         Route::Notes => view_notes(model),
-        Route::EditNote => view_new_note(model),
-        Route::NewNote => view_new_note(model),
+        Route::EditNote(dt) => view_edit_note(model, Some(dt)),
+        Route::NewNote => view_edit_note(model, None),
     }
 }
 
 fn view_notes(model: &Model) -> Node<Msg> {
     div![
         C!["modal-body"],
-        model.notes.iter().map(|note| div![
-            C!["tile"],
+        model.notes.iter().map(|note| {
             div![
-                C!["tile-content"],
-                p![C!["tile-title"], note.text.to_string()],
-                small![C!["tile-subtitle text-gray"], note.datetime.to_string()],
-            ],
-            div![
-                C!["tile-action"],
-                div![a![C!["btn"], attrs! {At::Href => "#edit-note"}, "Edit"]],
-                div![a![C!["btn"], attrs! {At::Href => "#delete-note"}, "Delete"]],
-            ],
-        ]),
+                C!["tile"],
+                div![
+                    C!["tile-content"],
+                    p![C!["tile-title"], note.text.to_string()],
+                    small![C!["tile-subtitle text-gray"], note.datetime.to_string()],
+                ],
+                div![
+                    C!["tile-action"],
+                    div![a![
+                        C!["btn"],
+                        attrs! {At::Href => format!("?dt={}#edit-note", note.datetime)},
+                        "Edit"
+                    ]],
+                    div![a![
+                        C!["btn"],
+                        attrs! {At::Href => format!("?dt={}#delete-note", note.datetime)},
+                        "Delete"
+                    ]],
+                ],
+            ]
+        }),
         div![
             C!["modal-footer"],
             div![a![
@@ -265,11 +305,13 @@ fn view_notes(model: &Model) -> Node<Msg> {
     ]
 }
 
-fn view_new_note(model: &Model) -> Node<Msg> {
+fn view_edit_note(model: &Model, datetime: Option<f64>) -> Node<Msg> {
+    //debug!("Rendering model: {:?}", model);
+
     div![
         C!["modal-body"],
         textarea![
-            attrs! {At::Value => model.new_note},
+            attrs! {At::Value => model.draft_note_text },
             input_ev(Ev::Input, Msg::NoteChanged)
         ],
         div![
@@ -291,7 +333,7 @@ fn route_title(route: Route) -> &'static str {
     match route {
         Route::Main => "Main",
         Route::Notes => "Notes",
-        Route::EditNote => "Edit note",
+        Route::EditNote(_) => "Edit note",
         Route::NewNote => "Take a note",
     }
 }
@@ -337,6 +379,20 @@ fn view_way(model: &Model) -> Node<Msg> {
         }
         None => div![],
     }
+}
+
+fn current_note(model: &Model) -> &Note {
+    let datetime = match model.route {
+        Route::EditNote(dt) => Some(dt),
+        _ => None,
+    };
+
+    model
+        .notes
+        .iter()
+        .filter(|n| Some(n.datetime) == datetime)
+        .next()
+        .expect("There is no current note in the model.")
 }
 
 async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
