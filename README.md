@@ -39,8 +39,10 @@ The development progress of this app has been documented in [this blog series](h
 
 ## Building and running
 
+Install Trunk, then run:
+
 ```
-RUSTFLAGS=--cfg=web_sys_unstable_apis trunk serve      
+trunk serve      
 ```
 
 ## Contributing
