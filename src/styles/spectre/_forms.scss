@@ -48,7 +48,7 @@ legend {
   outline: none;
   padding: $control-padding-y $control-padding-x;
   position: relative;
-  transition: background .2s, border .2s, box-shadow .2s, color .2s;
+  transition: background 0.2s, border 0.2s, box-shadow 0.2s, color 0.2s;
   width: 100%;
   &:focus {
     @include control-shadow();
@@ -122,7 +122,7 @@ textarea.form-input {
   padding: $control-padding-y $control-padding-x;
   vertical-align: middle;
   width: 100%;
-  background: $bg-color-light; 
+  background: $bg-color-light;
   &:focus {
     @include control-shadow();
     border-color: $primary-color;
@@ -135,13 +135,15 @@ textarea.form-input {
   &.select-sm {
     font-size: $font-size-sm;
     height: $control-size-sm;
-    padding: $control-padding-y-sm ($control-icon-size + $control-padding-x-sm) $control-padding-y-sm $control-padding-x-sm;
+    padding: $control-padding-y-sm ($control-icon-size + $control-padding-x-sm) $control-padding-y-sm
+      $control-padding-x-sm;
   }
 
   &.select-lg {
     font-size: $font-size-lg;
     height: $control-size-lg;
-    padding: $control-padding-y-lg ($control-icon-size + $control-padding-x-lg) $control-padding-y-lg $control-padding-x-lg;
+    padding: $control-padding-y-lg ($control-icon-size + $control-padding-x-lg) $control-padding-y-lg
+      $control-padding-x-lg;
   }
 
   // Multiple select
@@ -155,7 +157,9 @@ textarea.form-input {
     }
   }
   &:not([multiple]):not([size]) {
-    background: $bg-color-light url("data:image/svg+xml;charset=utf8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%204%205'%3E%3Cpath%20fill='%23667189'%20d='M2%200L0%202h4zm0%205L0%203h4z'/%3E%3C/svg%3E") no-repeat right .35rem center / .4rem .5rem;
+    background: $bg-color-light
+      url("data:image/svg+xml;charset=utf8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%204%205'%3E%3Cpath%20fill='%23667189'%20d='M2%200L0%202h4zm0%205L0%203h4z'/%3E%3C/svg%3E")
+      no-repeat right 0.35rem center / 0.4rem 0.5rem;
     padding-right: $control-icon-size + $control-padding-x;
   }
 }
@@ -202,9 +206,10 @@ textarea.form-input {
 .form-switch {
   display: block;
   line-height: $line-height;
-  margin: ($control-size - $control-size-sm) / 2 0;
+  margin: ($control-size - $control-size-sm) * 0.5 0;
   min-height: $control-size-sm;
-  padding: (($control-size-sm - $line-height) / 2) $control-padding-x (($control-size-sm - $line-height) / 2) ($control-icon-size + $control-padding-x);
+  padding: (($control-size-sm - $line-height) * 0.5) $control-padding-x (($control-size-sm - $line-height) * 0.5)
+    ($control-icon-size + $control-padding-x);
   position: relative;
 
   input {
@@ -229,7 +234,7 @@ textarea.form-input {
     cursor: pointer;
     display: inline-block;
     position: absolute;
-    transition: background .2s, border .2s, box-shadow .2s, color .2s;
+    transition: background 0.2s, border 0.2s, box-shadow 0.2s, color 0.2s;
   }
 
   // Input checkbox, radio and switch sizes
@@ -240,7 +245,7 @@ textarea.form-input {
 
   &.input-lg {
     font-size: $font-size-lg;
-    margin: ($control-size-lg - $control-size-sm) / 2 0;
+    margin: ($control-size-lg - $control-size-sm) * 0.5 0;
   }
 }
 
@@ -250,7 +255,7 @@ textarea.form-input {
     background: $bg-color-light;
     height: $control-icon-size;
     left: 0;
-    top: ($control-size-sm - $control-icon-size) / 2;
+    top: ($control-size-sm - $control-icon-size) * 0.5;
     width: $control-icon-size;
   }
 
@@ -332,7 +337,7 @@ textarea.form-input {
     border-radius: $unit-2 + $border-width;
     height: $unit-4 + $border-width * 2;
     left: 0;
-    top: ($control-size-sm - $unit-4) / 2 - $border-width;
+    top: ($control-size-sm - $unit-4) * 0.5 - $border-width;
     width: $unit-8;
     &::before {
       background: $bg-color-light;
@@ -343,7 +348,7 @@ textarea.form-input {
       left: 0;
       position: absolute;
       top: 0;
-      transition: background .2s, border .2s, box-shadow .2s, color .2s, left .2s;
+      transition: background 0.2s, border 0.2s, box-shadow 0.2s, color 0.2s, left 0.2s;
       width: $unit-4;
     }
   }
@@ -507,7 +512,7 @@ textarea.form-input {
   &.disabled {
     background-color: $bg-color-dark;
     cursor: not-allowed;
-    opacity: .5;
+    opacity: 0.5;
   }
 }
 
@@ -523,7 +528,7 @@ input {
     & + .form-icon {
       background: $bg-color-dark;
       cursor: not-allowed;
-      opacity: .5;
+      opacity: 0.5;
     }
   }
 }
