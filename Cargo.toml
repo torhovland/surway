@@ -8,13 +8,13 @@ edition = "2018"
 cfg-if = "1.0.0"
 console_log = { version = "0.2.0", features = ["color"] }
 gloo-events = "0.1.1"
-leaflet = "0.2.0"
+leaflet = "0.2.1"
 log = "0.4.14"
 quick-xml = { version = "0.22.0", features = ["serialize"] }
 rand = "0.8.4"
 seed = "0.8.0"
-serde = "1.0.129"
-web-sys = { version = "0.3.53", features = ["DomTokenList", "Element", "Geolocation", "HtmlAnchorElement", "Navigator", "PositionOptions", "WakeLock", "WakeLockType", "WakeLockSentinel"] }
+serde = "1.0.130"
+web-sys = { version = "0.3.55", features = ["DomTokenList", "Element", "Geolocation", "HtmlAnchorElement", "Navigator", "PositionOptions", "WakeLock", "WakeLockType", "WakeLockSentinel"] }
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
