@@ -1,5 +1,4 @@
 use leaflet::{LayerGroup, Map};
-use log::info;
 use seed::Url;
 use serde::{Deserialize, Serialize};
 use std::{collections::VecDeque, fmt};
@@ -11,7 +10,6 @@ use crate::{
     osm::{OsmDocument, OsmWay},
 };
 
-#[derive(Debug)]
 pub struct Model {
     pub route: Route,
     pub map: Option<Map>,
@@ -32,7 +30,7 @@ pub struct Model {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Route {
     Main,
-    EditNote(f64),
+    EditNote,
     NewNote,
     Notes,
 }
@@ -96,19 +94,10 @@ impl Model {
 
 impl From<Url> for Route {
     fn from(mut url: Url) -> Self {
-        let datetime = url
-            .search()
-            .get("dt")
-            .and_then(|vec| vec.iter().next())
-            .map(|s| s.parse::<f64>());
-
-        let hash_part = url.remaining_hash_path_parts();
-        info!("URL hash part: {:?}", hash_part.as_slice());
-
-        match (hash_part.as_slice(), datetime) {
-            (["edit-note"], Some(Ok(dt))) => Self::EditNote(dt),
-            (["new-note"], _) => Self::NewNote,
-            (["notes"], _) => Self::Notes,
+        match url.remaining_hash_path_parts().as_slice() {
+            ["edit-note"] => Self::EditNote,
+            ["new-note"] => Self::NewNote,
+            ["notes"] => Self::Notes,
             _ => Self::Main,
         }
     }

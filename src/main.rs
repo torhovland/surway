@@ -90,14 +90,8 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::UrlChanged(subs::UrlChanged(url)) => {
-            debug!("URL changed to: {}", url);
             let route = Route::from(url);
             model.route = route;
-            debug!("Route changed to: {:?}", route);
-
-            if let Route::EditNote(_) = model.route {
-                model.draft_note_text = current_note(model).text.clone();
-            }
         }
 
         Msg::DownloadOsmChunk => {
@@ -112,7 +106,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
 
         Msg::NoteChanged(text) => {
-            model.draft_note_text = text;
+            model.new_note = text;
         }
 
         Msg::OsmFetched(Ok(response_data)) => {
@@ -327,7 +321,7 @@ fn view_edit_note(model: &Model) -> Node<Msg> {
     div![
         C!["modal-body"],
         textarea![
-            attrs! {At::Value => model.draft_note_text },
+            attrs! {At::Value => model.new_note },
             input_ev(Ev::Input, Msg::NoteChanged)
         ],
         div![
@@ -349,7 +343,7 @@ fn route_title(route: Route) -> &'static str {
     match route {
         Route::Main => "Main",
         Route::Notes => "Notes",
-        Route::EditNote(_) => "Edit note",
+        Route::EditNote => "Edit note",
         Route::NewNote => "Take a note",
     }
 }
@@ -395,20 +389,6 @@ fn view_way(model: &Model) -> Node<Msg> {
         }
         None => div![],
     }
-}
-
-fn current_note(model: &Model) -> &Note {
-    let datetime = match model.route {
-        Route::EditNote(dt) => Some(dt),
-        _ => None,
-    };
-
-    model
-        .notes
-        .iter()
-        .filter(|n| Some(n.datetime) == datetime)
-        .next()
-        .expect("There is no current note in the model.")
 }
 
 async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
