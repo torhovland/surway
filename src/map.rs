@@ -163,8 +163,8 @@ pub fn render_position(model: &Model) {
                 .expect("Unable to serialize circle options"),
         ));
 
-        topology_layer_group.addTo(&map);
-        position_layer_group.addTo(&map);
+        topology_layer_group.addTo(map);
+        position_layer_group.addTo(map);
     }
 }
 
@@ -176,7 +176,7 @@ pub fn render_notes(model: &Model) {
             notes_layer_group.addLayer(&Marker::new(&LatLng::from(&note.position)));
         }
 
-        notes_layer_group.addTo(&map);
+        notes_layer_group.addTo(map);
     }
 }
 
@@ -252,7 +252,7 @@ where
             .expect("Unable to run constructor"),
     );
 
-    control_button.addTo(&map);
+    control_button.addTo(map);
 }
 
 impl From<&Coord> for LatLng {

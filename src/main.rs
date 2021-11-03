@@ -3,8 +3,8 @@ use cfg_if::cfg_if;
 use geo::{destination, BoundingBox, Coord};
 use js_sys::Date;
 use leaflet::{LayerGroup, Map};
-use log::{debug, error, info, warn};
-use model::{Model, Note, Route};
+use log::{error, info, warn};
+use model::{Model, Note, NoteId, Route};
 use osm::OsmDocument;
 use rand::prelude::*;
 use seed::{prelude::*, *};
@@ -27,6 +27,8 @@ enum Msg {
     Position(f64, f64),
     RandomWalk,
     SaveNote,
+    EditNote(NoteId),
+    DeleteNote(NoteId),
     SetMap((Map, LayerGroup, LayerGroup, LayerGroup)),
     FlipWakeLock,
     KeepWakeLockSentinel(WakeLockSentinel),
@@ -79,8 +81,8 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         osm_chunk_radius: 500.0,
         osm_chunk_trigger_factor: 0.8,
         notes: LocalStorage::get(NOTE_STORAGE_KEY).unwrap_or_default(),
-        draft_note_position: None,
-        draft_note_text: "".into(),
+        new_note: "".into(),
+        note_id: None,
         wake_lock_sentinel: None,
     }
 }
@@ -117,7 +119,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.osm = quick_xml::de::from_str(&response_data)
                 .expect("Unable to deserialize the OSM data");
 
-            map::render_topology_and_position(&model);
+            map::render_topology_and_position(model);
         }
 
         Msg::OsmFetched(Err(fetch_error)) => {
@@ -146,41 +148,41 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
 
         Msg::SaveNote => {
-            let existing_datetime = if let Route::EditNote(dt) = model.route {
-                Some(dt)
-            } else {
-                None
+            let id = model.note_id.unwrap_or_else(NoteId::new);
+
+            let note = Note {
+                id,
+                time: Date::now(),
+                text: model.new_note.clone(),
+                position: model.position,
             };
 
-            let mut new_note = Note {
-                position: model
-                    .draft_note_position
-                    .expect("No draft position has been set."),
-                text: model.draft_note_text.clone(),
-                datetime: Date::now(),
-            };
+            model.notes.retain(|note| note.id != id);
+            model.notes.push(note);
 
-            if let Some(dt) = existing_datetime {
-                if let Some(existing_note) = model.notes.iter().find(|note| note.datetime == dt) {
-                    new_note.datetime = existing_note.datetime;
-                    model.notes.retain(|note| note.datetime != dt);
-
-                    // Note {
-                    //     position: model
-                    //         .draft_note_position
-                    //         .expect("No draft position has been set."),
-                    //     text: model.draft_note_text.clone(),
-                    //     datetime: dt,
-                    // }
-                }
-            };
-
-            model.notes.push(new_note);
+            model.note_id = None;
+            model.new_note = "".into();
 
             LocalStorage::insert(NOTE_STORAGE_KEY, &model.notes)
                 .expect("Unable to save note to LocalStorage");
 
-            map::render_notes(&model);
+            map::render_notes(model);
+        }
+
+        Msg::EditNote(id) => {
+            model.note_id = Some(id);
+            model.new_note = model
+                .notes
+                .iter()
+                .find(|note| note.id == id)
+                .unwrap_or_else(|| panic!("Did not find a note with id {}", id))
+                .text
+                .clone();
+            model.route = Route::EditNote;
+        }
+
+        Msg::DeleteNote(id) => {
+            model.notes.retain(|note| note.id != id);
         }
 
         Msg::SetMap((map, topology_layer_group, position_layer_group, notes_layer_group)) => {
@@ -188,9 +190,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.topology_layer_group = Some(topology_layer_group);
             model.position_layer_group = Some(position_layer_group);
             model.notes_layer_group = Some(notes_layer_group);
-            map::set_view(&model);
-            map::render_topology_and_position(&model);
-            map::render_notes(&model);
+            map::set_view(model);
+            map::render_topology_and_position(model);
+            map::render_notes(model);
         }
 
         Msg::FlipWakeLock => {
@@ -237,7 +239,7 @@ fn view(model: &Model) -> Node<Msg> {
                     "Notes"
                 )
             ],
-            view_way(&model),
+            view_way(model),
         ],
         div![
             C![if model.route != Route::Main {
@@ -263,8 +265,8 @@ fn view_modal(model: &Model) -> Node<Msg> {
     match model.route {
         Route::Main => div![],
         Route::Notes => view_notes(model),
-        Route::EditNote(dt) => view_edit_note(model, Some(dt)),
-        Route::NewNote => view_edit_note(model, None),
+        Route::EditNote => view_edit_note(model),
+        Route::NewNote => view_edit_note(model),
     }
 }
 
@@ -272,25 +274,31 @@ fn view_notes(model: &Model) -> Node<Msg> {
     div![
         C!["modal-body"],
         model.notes.iter().map(|note| {
+            let note_id = note.id;
+            let time: String = Date::new(&JsValue::from(note.time)).to_string().into();
+
             div![
-                C!["tile"],
+                C!["card-container"],
                 div![
-                    C!["tile-content"],
-                    p![C!["tile-title"], note.text.to_string()],
-                    small![C!["tile-subtitle text-gray"], note.datetime.to_string()],
-                ],
-                div![
-                    C!["tile-action"],
-                    div![a![
-                        C!["btn"],
-                        attrs! {At::Href => format!("?dt={}#edit-note", note.datetime)},
-                        "Edit"
-                    ]],
-                    div![a![
-                        C!["btn"],
-                        attrs! {At::Href => format!("?dt={}#delete-note", note.datetime)},
-                        "Delete"
-                    ]],
+                    C!["card"],
+                    div![
+                        C!["card-header"],
+                        div![
+                            C!["btn-group  float-right"],
+                            button![
+                                C!["btn"],
+                                "Edit",
+                                ev(Ev::Click, move |_| Msg::EditNote(note_id))
+                            ],
+                            button![
+                                C!["btn"],
+                                "Delete",
+                                ev(Ev::Click, move |_| Msg::DeleteNote(note_id))
+                            ],
+                        ],
+                        div![C!["tile-subtitle text-gray"], time],
+                    ],
+                    div![C!["card-body"], p![note.text.to_string()],],
                 ],
             ]
         }),
@@ -305,9 +313,7 @@ fn view_notes(model: &Model) -> Node<Msg> {
     ]
 }
 
-fn view_edit_note(model: &Model, datetime: Option<f64>) -> Node<Msg> {
-    //debug!("Rendering model: {:?}", model);
-
+fn view_edit_note(model: &Model) -> Node<Msg> {
     div![
         C!["modal-body"],
         textarea![
@@ -415,8 +421,8 @@ async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
 }
 
 fn handle_new_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
-    map::pan_to_position(&model);
-    map::render_position(&model);
+    map::pan_to_position(model);
+    map::render_position(model);
 
     if model.is_outside_osm_trigger_box() {
         model.osm_chunk_position = Some(model.position);

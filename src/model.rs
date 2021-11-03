@@ -2,10 +2,12 @@ use leaflet::{LayerGroup, Map};
 use log::info;
 use seed::Url;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use web_sys::WakeLockSentinel;
 
 use crate::{
     geo::Coord,
+    js_sys::Date,
     osm::{OsmDocument, OsmWay},
 };
 
@@ -22,8 +24,8 @@ pub struct Model {
     pub osm_chunk_radius: f64,
     pub osm_chunk_trigger_factor: f64,
     pub notes: Vec<Note>,
-    pub draft_note_position: Option<Coord>,
-    pub draft_note_text: String,
+    pub new_note: String,
+    pub note_id: Option<NoteId>,
     pub wake_lock_sentinel: Option<WakeLockSentinel>,
 }
 
@@ -35,9 +37,25 @@ pub enum Route {
     Notes,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, PartialEq, Deserialize, Serialize)]
+pub struct NoteId(u32);
+
+impl NoteId {
+    pub fn new() -> NoteId {
+        NoteId(Date::now().round().rem_euclid(2f64.powi(32)) as u32)
+    }
+}
+
+impl fmt::Display for NoteId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct Note {
-    pub datetime: f64,
+    pub id: NoteId,
+    pub time: f64,
     pub text: String,
     pub position: Coord,
 }
