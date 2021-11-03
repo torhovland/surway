@@ -2,7 +2,7 @@ use leaflet::{LayerGroup, Map};
 use log::info;
 use seed::Url;
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::{collections::VecDeque, fmt};
 use web_sys::WakeLockSentinel;
 
 use crate::{
@@ -23,7 +23,7 @@ pub struct Model {
     pub osm_chunk_position: Option<Coord>,
     pub osm_chunk_radius: f64,
     pub osm_chunk_trigger_factor: f64,
-    pub notes: Vec<Note>,
+    pub notes: VecDeque<Note>,
     pub new_note: String,
     pub note_id: Option<NoteId>,
     pub wake_lock_sentinel: Option<WakeLockSentinel>,

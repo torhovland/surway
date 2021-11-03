@@ -149,16 +149,26 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
         Msg::SaveNote => {
             let id = model.note_id.unwrap_or_else(NoteId::new);
+            let time;
+            let position;
+
+            if let Some(existing_note) = model.notes.iter().find(|note| note.id == id) {
+                time = existing_note.time;
+                position = existing_note.position;
+            } else {
+                time = Date::now();
+                position = model.position;
+            }
 
             let note = Note {
                 id,
-                time: Date::now(),
+                time,
+                position,
                 text: model.new_note.clone(),
-                position: model.position,
             };
 
             model.notes.retain(|note| note.id != id);
-            model.notes.push(note);
+            model.notes.push_front(note);
 
             model.note_id = None;
             model.new_note = "".into();
