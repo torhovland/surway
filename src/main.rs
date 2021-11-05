@@ -27,6 +27,7 @@ enum Msg {
     Position(f64, f64),
     RandomWalk,
     SaveNote,
+    Locate(Coord),
     EditNote(NoteId),
     DeleteNote(NoteId),
     SetMap((Map, LayerGroup, LayerGroup, LayerGroup)),
@@ -173,6 +174,10 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             map::render_notes(model);
         }
 
+        Msg::Locate(position) => {
+            info!("Locating {:?}", position);
+        }
+
         Msg::EditNote(id) => {
             model.note_id = Some(id);
             model.new_note = model
@@ -280,6 +285,7 @@ fn view_notes(model: &Model) -> Node<Msg> {
         model.notes.iter().map(|note| {
             let note_id = note.id;
             let time: String = Date::new(&JsValue::from(note.time)).to_string().into();
+            let position = note.position;
 
             div![
                 C!["card-container"],
@@ -291,12 +297,17 @@ fn view_notes(model: &Model) -> Node<Msg> {
                             C!["btn-group  float-right"],
                             button![
                                 C!["btn"],
-                                "Edit",
+                                img![attrs! {At::Src => "icons/locate.svg"}, C!["icon"]],
+                                ev(Ev::Click, move |_| Msg::Locate(position))
+                            ],
+                            button![
+                                C!["btn"],
+                                img![attrs! {At::Src => "icons/pen.svg"}, C!["icon"]],
                                 ev(Ev::Click, move |_| Msg::EditNote(note_id))
                             ],
                             button![
                                 C!["btn"],
-                                "Delete",
+                                img![attrs! {At::Src => "icons/trash.svg"}, C!["icon"]],
                                 ev(Ev::Click, move |_| Msg::DeleteNote(note_id))
                             ],
                         ],
