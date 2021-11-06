@@ -28,6 +28,7 @@ enum Msg {
     Locate(Coord),
     RandomWalk,
     SaveNote,
+    NewNote,
     EditNote(NoteId),
     DeleteNote(NoteId),
     SetMap((Map, LayerGroup, LayerGroup, LayerGroup)),
@@ -205,6 +206,12 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             map::render_notes(model);
         }
 
+        Msg::NewNote => {
+            model.note_id = None;
+            model.new_note = String::new();
+            model.route = Route::EditNote;
+        }
+
         Msg::EditNote(id) => {
             model.note_id = Some(id);
             model.new_note = model
@@ -352,11 +359,11 @@ fn view_notes(model: &Model) -> Node<Msg> {
         }),
         div![
             C!["modal-footer"],
-            div![a![
+            button![
                 C!["btn btn-primary"],
-                attrs! {At::Href => "#new-note"},
-                "Take a note"
-            ]],
+                "Take a note",
+                ev(Ev::Click, move |_| Msg::NewNote)
+            ],
         ]
     ]
 }
