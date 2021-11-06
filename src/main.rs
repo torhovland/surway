@@ -24,10 +24,10 @@ enum Msg {
     InvalidateMapSize,
     NoteChanged(String),
     OsmFetched(fetch::Result<String>),
-    Position(f64, f64),
+    Position(Coord),
+    Locate(Coord),
     RandomWalk,
     SaveNote,
-    Locate(Coord),
     EditNote(NoteId),
     DeleteNote(NoteId),
     SetMap((Map, LayerGroup, LayerGroup, LayerGroup)),
@@ -78,6 +78,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         notes_layer_group: None,
         osm: OsmDocument::new(),
         position,
+        track_position: true,
         osm_chunk_position: None,
         osm_chunk_radius: 500.0,
         osm_chunk_trigger_factor: 0.8,
@@ -129,9 +130,18 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             error!("Fetching OSM data failed: {:#?}", fetch_error);
         }
 
-        Msg::Position(lat, lon) => {
-            model.position = Coord { lat, lon };
-            handle_new_position(model, orders);
+        Msg::Position(position) => {
+            if model.track_position {
+                pan_to_position(model, position);
+            }
+
+            model.position = position;
+            update_position(model, orders);
+        }
+
+        Msg::Locate(position) => {
+            model.track_position = false;
+            pan_to_position(model, position);
         }
 
         Msg::RandomWalk => {
@@ -139,7 +149,12 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             let bearing = rng.gen_range(0.0..360.0);
             let distance = rng.gen_range(0.0..100.0);
             model.position = destination(&model.position, bearing, distance);
-            handle_new_position(model, orders);
+
+            if model.track_position {
+                pan_to_position(model, model.position);
+            }
+
+            update_position(model, orders);
         }
 
         Msg::SaveNote => {
@@ -172,10 +187,6 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 .expect("Unable to save note to LocalStorage");
 
             map::render_notes(model);
-        }
-
-        Msg::Locate(position) => {
-            info!("Locating {:?}", position);
         }
 
         Msg::EditNote(id) => {
@@ -422,8 +433,7 @@ async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
     }
 }
 
-fn handle_new_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
-    map::pan_to_position(model);
+fn update_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
     map::render_position(model);
 
     if model.is_outside_osm_trigger_box() {
@@ -433,6 +443,10 @@ fn handle_new_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
 
     // Make sure the map is centered on our position even if the size of the map has changed
     orders.after_next_render(|_| Msg::InvalidateMapSize);
+}
+
+fn pan_to_position(model: &mut Model, position: Coord) {
+    map::pan_to_position(model, position);
 }
 
 fn init_geolocation(orders: &mut impl Orders<Msg>) {
@@ -447,10 +461,7 @@ fn init_geolocation(orders: &mut impl Orders<Msg>) {
         let pos: GeolocationPosition = position.into();
         let coords = pos.coords();
 
-        app.update(msg_mapper(Msg::Position(
-            coords.latitude(),
-            coords.longitude(),
-        )));
+        app.update(msg_mapper(Msg::Position(coords.into())));
     };
 
     let geo_callback_function = Closure::wrap(Box::new(geo_callback) as Box<dyn FnMut(JsValue)>);

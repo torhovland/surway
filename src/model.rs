@@ -18,6 +18,7 @@ pub struct Model {
     pub notes_layer_group: Option<LayerGroup>,
     pub osm: OsmDocument,
     pub position: Coord,
+    pub track_position: bool,
     pub osm_chunk_position: Option<Coord>,
     pub osm_chunk_radius: f64,
     pub osm_chunk_trigger_factor: f64,

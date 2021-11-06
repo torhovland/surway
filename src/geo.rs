@@ -1,3 +1,4 @@
+use crate::bindings::GeolocationCoordinates;
 use crate::osm::{OsmDocument, OsmNode, OsmWay};
 use serde::{Deserialize, Serialize};
 
@@ -7,6 +8,15 @@ const R: f64 = 6371008.8; // mean Earth radius
 pub struct Coord {
     pub lat: f64,
     pub lon: f64,
+}
+
+impl From<GeolocationCoordinates> for Coord {
+    fn from(item: GeolocationCoordinates) -> Self {
+        Coord {
+            lat: item.latitude(),
+            lon: item.longitude(),
+        }
+    }
 }
 
 pub struct BoundingBox {

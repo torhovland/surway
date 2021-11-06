@@ -72,13 +72,13 @@ where
 }
 
 pub fn set_view(model: &Model) {
-    if let (Some(map), position) = (&model.map, &model.position) {
+    if let (Some(map), position) = (&model.map, model.position) {
         map.setView(&position.into(), 19.0);
     }
 }
 
-pub fn pan_to_position(model: &Model) {
-    if let (Some(map), position) = (&model.map, &model.position) {
+pub fn pan_to_position(model: &Model, position: Coord) {
+    if let Some(map) = &model.map {
         map.panTo(&position.into());
     }
 }
@@ -158,7 +158,7 @@ pub fn render_position(model: &Model) {
         }
 
         position_layer_group.addLayer(&Circle::new_with_options(
-            &LatLng::from(&model.position),
+            &LatLng::from(model.position),
             &JsValue::from_serde(&CircleOptions { radius: 8.0 })
                 .expect("Unable to serialize circle options"),
         ));
@@ -173,7 +173,7 @@ pub fn render_notes(model: &Model) {
         notes_layer_group.clearLayers();
 
         for note in model.notes.iter() {
-            notes_layer_group.addLayer(&Marker::new(&LatLng::from(&note.position)));
+            notes_layer_group.addLayer(&Marker::new(&LatLng::from(note.position)));
         }
 
         notes_layer_group.addTo(map);
@@ -255,8 +255,8 @@ where
     control_button.addTo(map);
 }
 
-impl From<&Coord> for LatLng {
-    fn from(coord: &Coord) -> Self {
+impl From<Coord> for LatLng {
+    fn from(coord: Coord) -> Self {
         LatLng::new(coord.lat, coord.lon)
     }
 }
