@@ -14,7 +14,7 @@
   padding: $control-padding-y $control-padding-x;
   text-align: center;
   text-decoration: none;
-  transition: background .2s, border .2s, box-shadow .2s, color .2s;
+  transition: background 0.2s, border 0.2s, box-shadow 0.2s, color 0.2s;
   user-select: none;
   vertical-align: middle;
   white-space: nowrap;
@@ -44,7 +44,7 @@
   &:disabled,
   &.disabled {
     cursor: default;
-    opacity: .5;
+    opacity: 0.5;
     pointer-events: none;
   }
 
@@ -145,8 +145,8 @@
 
     &:focus,
     &:hover {
-      background: rgba($bg-color, .5);
-      opacity: .95;
+      background: rgba($bg-color, 0.5);
+      opacity: 0.95;
     }
 
     &::before {
@@ -161,6 +161,8 @@
   flex-wrap: wrap;
 
   .btn {
+    display: inline-flex;
+    align-items: center;
     flex: 1 0 auto;
     &:first-child:not(:last-child) {
       border-bottom-right-radius: 0;

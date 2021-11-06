@@ -295,8 +295,9 @@ fn view_notes(model: &Model) -> Node<Msg> {
                         C!["card-header"],
                         div![
                             C!["btn-group  float-right"],
-                            button![
+                            a![
                                 C!["btn"],
+                                attrs! {At::Href => "#"},
                                 img![attrs! {At::Src => "icons/locate.svg"}, C!["icon"]],
                                 ev(Ev::Click, move |_| Msg::Locate(position))
                             ],
