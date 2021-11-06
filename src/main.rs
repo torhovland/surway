@@ -323,8 +323,12 @@ fn view_notes(model: &Model) -> Node<Msg> {
         C!["modal-body"],
         model.notes.iter().map(|note| {
             let note_id = note.id;
-            let time: String = Date::new(&JsValue::from(note.time)).to_string().into();
             let position = note.position;
+            let mut time: String = Date::new(&JsValue::from(note.time)).to_string().into();
+
+            if let (Some(start), Some(end)) = (time.find('('), time.find(')')) {
+                time.replace_range(start..=end, "");
+            }
 
             div![
                 C!["card-container"],
@@ -351,7 +355,7 @@ fn view_notes(model: &Model) -> Node<Msg> {
                                 ev(Ev::Click, move |_| Msg::DeleteNote(note_id))
                             ],
                         ],
-                        div![C!["tile-subtitle text-gray"], time],
+                        div![C!["card-subtitle text-gray"], time],
                     ],
                     div![C!["card-body"], p![note.text.to_string()],],
                 ],
