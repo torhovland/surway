@@ -31,6 +31,7 @@ enum Msg {
     EditNote(NoteId),
     DeleteNote(NoteId),
     SetMap((Map, LayerGroup, LayerGroup, LayerGroup)),
+    FlipTrackPosition,
     FlipWakeLock,
     KeepWakeLockSentinel(WakeLockSentinel),
 }
@@ -44,7 +45,11 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     init_geolocation(orders);
 
     let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
+    let track_position_callback = move || {
+        app.update(msg_mapper(Msg::FlipTrackPosition));
+    };
 
+    let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
     let wake_lock_callback = if is_wake_lock_supported() {
         Some(move || {
             app.update(msg_mapper(Msg::FlipWakeLock));
@@ -56,7 +61,9 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     orders
         .subscribe(Msg::UrlChanged) // Handle route changes.
         .notify(subs::UrlChanged(url.clone())) // Handle initial route.
-        .after_next_render(move |_| Msg::SetMap(map::init(wake_lock_callback))); // Cannot initialize Leaflet until the map element has rendered.
+        .after_next_render(move |_| {
+            Msg::SetMap(map::init(track_position_callback, wake_lock_callback))
+        }); // Cannot initialize Leaflet until the map element has rendered.
 
     // TODO: Handle like any other route
     if url.search().contains_key("random_walk") {
@@ -140,7 +147,11 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
 
         Msg::Locate(position) => {
-            model.track_position = false;
+            if model.track_position {
+                model.track_position = false;
+                flip_track_position_icon();
+            }
+
             pan_to_position(model, position);
         }
 
@@ -153,6 +164,11 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             if model.track_position {
                 pan_to_position(model, model.position);
             }
+
+            info!(
+                "Walking randomly for {} m at bearing {} yields new position {:?}.",
+                distance, bearing, model.position
+            );
 
             update_position(model, orders);
         }
@@ -213,6 +229,11 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             map::set_view(model);
             map::render_topology_and_position(model);
             map::render_notes(model);
+        }
+
+        Msg::FlipTrackPosition => {
+            model.track_position = !model.track_position;
+            flip_track_position_icon();
         }
 
         Msg::FlipWakeLock => {
@@ -487,6 +508,27 @@ fn wake_lock() -> WakeLock {
 fn is_wake_lock_supported() -> bool {
     let wake_lock_test: JsValue = JsCast::unchecked_into(wake_lock());
     wake_lock_test != JsValue::UNDEFINED
+}
+
+fn flip_track_position_icon() {
+    let css_class = "icon-control-container-enabled";
+
+    let class_list = document()
+        .get_element_by_id("track-position-control-container")
+        .expect("Unable to get track position control container.")
+        .dyn_into::<Element>()
+        .expect("Unable to get track position Element.")
+        .class_list();
+
+    if class_list.contains(css_class) {
+        class_list
+            .remove_1(css_class)
+            .expect("Unable to remove class to track position Element.");
+    } else {
+        class_list
+            .add_1(css_class)
+            .expect("Unable to add class to track position Element.");
+    }
 }
 
 fn flip_wake_lock_icon() {
