@@ -226,6 +226,11 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
         Msg::DeleteNote(id) => {
             model.notes.retain(|note| note.id != id);
+
+            LocalStorage::insert(NOTE_STORAGE_KEY, &model.notes)
+                .expect("Unable to save note to LocalStorage");
+
+            map::render_notes(model);
         }
 
         Msg::SetMap((map, topology_layer_group, position_layer_group, notes_layer_group)) => {
