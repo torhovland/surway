@@ -9,7 +9,6 @@ use js_sys::{Array, Function};
 use leaflet::{
     Circle, Control, LatLng, LatLngBounds, LayerGroup, Map, Marker, Polyline, Rectangle, TileLayer,
 };
-use log::info;
 use seed::{prelude::*, window};
 use serde::{Deserialize, Serialize};
 
@@ -30,6 +29,9 @@ struct CircleOptions {
 struct MarkerOptions {
     title: String,
 }
+
+#[derive(Serialize, Deserialize)]
+struct PopupOptions {}
 
 #[derive(Serialize, Deserialize)]
 struct ControlOptions {
@@ -182,25 +184,18 @@ pub fn render_notes(model: &Model) {
         notes_layer_group.clearLayers();
 
         for note in model.notes.iter() {
-            let closure_note_text = note.text.clone();
-
-            let on_click = move || {
-                info!("{}", closure_note_text);
-            };
-
-            let on_click_closure = Closure::wrap(Box::new(on_click) as Box<dyn FnMut()>);
-
             let marker = Marker::new_with_options(
                 &LatLng::from(note.position),
                 &JsValue::from_serde(&MarkerOptions {
                     title: note.text.clone(),
                 })
-                .expect("Unable to serialize rectangle options"),
+                .expect("Unable to serialize marker options"),
             );
 
-            marker.on("click", on_click_closure.as_ref());
-
-            on_click_closure.forget();
+            marker.bindPopup(
+                &JsValue::from(note.text.clone()),
+                &JsValue::from_serde(&PopupOptions {}).expect("Unable to serialize popup options"),
+            );
 
             notes_layer_group.addLayer(&marker);
         }
