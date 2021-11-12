@@ -1,5 +1,6 @@
 use leaflet::{LayerGroup, Map};
 use seed::Url;
+use seed::{prelude::*, *};
 use serde::{Deserialize, Serialize};
 use std::{collections::VecDeque, fmt};
 use web_sys::WakeLockSentinel;
@@ -12,7 +13,6 @@ use crate::{
 
 pub struct Model {
     pub route: Route,
-    pub map: Option<Map>,
     pub topology_layer_group: Option<LayerGroup>,
     pub position_layer_group: Option<LayerGroup>,
     pub notes_layer_group: Option<LayerGroup>,
@@ -26,6 +26,7 @@ pub struct Model {
     pub new_note: String,
     pub note_id: Option<NoteId>,
     pub wake_lock_sentinel: Option<WakeLockSentinel>,
+    pub timer_handle: Option<StreamHandle>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

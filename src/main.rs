@@ -31,10 +31,12 @@ enum Msg {
     NewNote,
     EditNote(NoteId),
     DeleteNote(NoteId),
-    SetMap((Map, LayerGroup, LayerGroup, LayerGroup)),
+    SetMapMoveHandler,
+    MapMoved,
     FlipTrackPosition,
     FlipWakeLock,
     KeepWakeLockSentinel(WakeLockSentinel),
+    OnTick,
 }
 
 fn main() {
@@ -62,9 +64,17 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     orders
         .subscribe(Msg::UrlChanged) // Handle route changes.
         .notify(subs::UrlChanged(url.clone())) // Handle initial route.
-        .after_next_render(move |_| {
-            Msg::SetMap(map::init(track_position_callback, wake_lock_callback))
+        .after_next_render(move |info| {
+            info!("RenderInfo: {:?}", info);
+
+            map::init(track_position_callback, wake_lock_callback);
+        }) // Cannot initialize Leaflet until the map element has rendered
+        //.after_next_render(|_| Msg::SetMapMoveHandler) // Cannot initialize Leaflet until the map element has rendered.
+        .after_next_render(|info| {
+            info!("RenderInfo: {:?}", info);
         }); // Cannot initialize Leaflet until the map element has rendered.
+
+    let timer_handle = orders.stream_with_handle(streams::interval(3000, || Msg::OnTick));
 
     // TODO: Handle like any other route
     if url.search().contains_key("random_walk") {
@@ -80,7 +90,6 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
 
     Model {
         route: Route::from(url),
-        map: None,
         topology_layer_group: None,
         position_layer_group: None,
         notes_layer_group: None,
@@ -94,6 +103,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         new_note: "".into(),
         note_id: None,
         wake_lock_sentinel: None,
+        timer_handle: Some(timer_handle),
     }
 }
 
@@ -243,7 +253,22 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             map::render_notes(model);
         }
 
+        Msg::SetMapMoveHandler => {
+            let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
+            let move_map_callback = move || {
+                //app.update(msg_mapper(Msg::FlipTrackPosition));
+            };
+
+            let map = model.map.as_ref().expect("Map not set.");
+            map::update(map, move_map_callback);
+        }
+
+        Msg::MapMoved => {
+            info!("Map moved!");
+        }
+
         Msg::FlipTrackPosition => {
+            info!("flip");
             model.track_position = !model.track_position;
             flip_track_position_icon();
         }
@@ -273,6 +298,19 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
         Msg::KeepWakeLockSentinel(sentinel) => {
             model.wake_lock_sentinel = Some(sentinel);
+        }
+
+        Msg::OnTick => {
+            info!("tick");
+            model.timer_handle = None;
+
+            let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
+            let move_map_callback = move || {
+                app.update(msg_mapper(Msg::FlipTrackPosition));
+            };
+
+            let map = model.map.as_ref().expect("Map not set.");
+            map::update(map, move_map_callback);
         }
     }
 }

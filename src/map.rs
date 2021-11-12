@@ -9,8 +9,10 @@ use js_sys::{Array, Function};
 use leaflet::{
     Circle, Control, LatLng, LatLngBounds, LayerGroup, Map, Marker, Polyline, Rectangle, TileLayer,
 };
+use log::info;
 use seed::{prelude::*, window};
 use serde::{Deserialize, Serialize};
+use web_sys::EventTarget;
 
 #[derive(Serialize, Deserialize)]
 #[allow(non_snake_case)]
@@ -48,8 +50,8 @@ pub fn init<T, U>(
     wake_lock_callback: Option<U>,
 ) -> (Map, LayerGroup, LayerGroup, LayerGroup)
 where
-    T: Fn() + 'static + Clone,
-    U: Fn() + 'static + Clone,
+    T: Fn() + 'static,
+    U: Fn() + 'static,
 {
     let map = Map::new("map", &JsValue::NULL);
 
@@ -80,6 +82,29 @@ where
         position_layer_group,
         notes_layer_group,
     )
+}
+
+pub fn update<T>(map: &Map, move_map_callback: T)
+where
+    T: Fn() + 'static,
+{
+    let on_move = Closure::wrap(Box::new(move |_| {
+        move_map_callback();
+    }) as Box<dyn FnMut(JsValue)>);
+
+    map.on("movestart", on_move.as_ref());
+    on_move.forget();
+
+    // let on_move = EventListener::new(
+    //     map.dyn_ref::<EventTarget>()
+    //         .expect("Could not cast map to EventTarget."),
+    //     "movestart",
+    //     move |_| {
+    //         move_map_callback();
+    //     },
+    // );
+
+    // on_move.forget();
 }
 
 pub fn set_view(model: &Model) {
@@ -218,7 +243,7 @@ fn bbox(position: &Coord, radius: f64) -> LatLngBounds {
 
 fn add_track_position_control<F>(map: &Map, track_position_callback: F)
 where
-    F: Fn() + 'static + Clone,
+    F: Fn() + 'static, //+ Clone,
 {
     let props = JsValue::from_serde(&ControlProps {
         options: ControlOptions {
@@ -281,7 +306,7 @@ where
 
 fn add_wake_lock_control<F>(map: &Map, wake_lock_callback: F)
 where
-    F: Fn() + 'static + Clone,
+    F: Fn() + 'static,
 {
     let props = JsValue::from_serde(&ControlProps {
         options: ControlOptions {
