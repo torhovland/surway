@@ -11,13 +11,14 @@ The development progress of this app has been documented in [this blog series](h
 - Shows nearby OSM ways on a map.
 - Shows OSM tags for the way nearest you.
 - Editor for notes geo-located at your current position (useful for later editing).
+- Uploading notes to OSM.
+- Screen wake-lock; ability to keep screen on (on supported browsers/devices).
 
 ### Planned features
 
-- Managing notes.
+- OSM authentication, so notes are not posted anonymously.
 
 - Uploading to OSM
-    - Geo-located notes
     - GPX tracks
     - Points of interest (POI)
 
@@ -28,8 +29,9 @@ The development progress of this app has been documented in [this blog series](h
 - PWA features
     - Manifest for showing the web app as a phone app.
     - Being able to reopen the app and show the previously downloaded ways while being offline.
-    - Screen wake-lock; ability to keep screen on.
     - Push notifications when an alert triggers (see below).
+
+- Downloading third-party nearby notes from OSM (for surveying).
 
 - Configurable alerts, e.g.
     - When you are no longer near a way.
