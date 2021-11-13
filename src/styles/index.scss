@@ -82,8 +82,13 @@ textarea {
     justify-content: center;
 }
 
-.icon-control-container-enabled {
-    background-color: orange;
+.icon-enabled,
+.icon-enabled:focus {
+    background-color: orange !important;
+}
+
+.icon-disabled {
+    background-color: white;
 }
 
 .icon-control {

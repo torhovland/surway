@@ -8,6 +8,7 @@ use model::{Model, Note, NoteId, Route};
 use osm::OsmDocument;
 use rand::prelude::*;
 use seed::{prelude::*, *};
+use urlencoding::encode;
 use web_sys::{Element, PositionOptions, WakeLock, WakeLockSentinel, WakeLockType};
 
 mod bindings;
@@ -23,13 +24,15 @@ enum Msg {
     DownloadOsmChunk,
     InvalidateMapSize,
     NoteChanged(String),
-    OsmFetched(fetch::Result<String>),
+    OsmMapFetched(fetch::Result<String>),
+    OsmNotePosted(fetch::Result<NoteId>),
     Position(Coord),
     Locate(Coord),
     RandomWalk,
     SaveNote,
     NewNote,
     EditNote(NoteId),
+    UploadNote(NoteId),
     DeleteNote(NoteId),
     SetMap((Map, LayerGroup, LayerGroup, LayerGroup)),
     FlipTrackPosition,
@@ -106,7 +109,8 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
         Msg::DownloadOsmChunk => {
             let bbox = model.position.bbox(model.osm_chunk_radius);
-            orders.perform_cmd(async move { Msg::OsmFetched(send_osm_request(&bbox).await) });
+            orders
+                .perform_cmd(async move { Msg::OsmMapFetched(send_osm_map_request(&bbox).await) });
         }
 
         Msg::InvalidateMapSize => {
@@ -119,14 +123,14 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.new_note = text;
         }
 
-        Msg::OsmFetched(Ok(response_data)) => {
+        Msg::OsmMapFetched(Ok(response_data)) => {
             model.osm = quick_xml::de::from_str(&response_data)
                 .expect("Unable to deserialize the OSM data");
 
             map::render_topology_and_position(model);
         }
 
-        Msg::OsmFetched(Err(fetch_error)) => {
+        Msg::OsmMapFetched(Err(fetch_error)) => {
             if let FetchError::StatusError(status) = &fetch_error {
                 if status.code == 429 || status.code == 504 {
                     const SECONDS: u32 = 10;
@@ -192,6 +196,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 time,
                 position,
                 text: model.new_note.clone(),
+                uploaded: false,
             };
 
             model.notes.retain(|note| note.id != id);
@@ -222,6 +227,32 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 .text
                 .clone();
             model.route = Route::EditNote;
+        }
+
+        Msg::UploadNote(id) => {
+            let note: Note = model
+                .notes
+                .iter()
+                .find(|note| note.id == id)
+                .unwrap_or_else(|| panic!("Did not find a note with id {}", id))
+                .clone();
+
+            if !note.uploaded {
+                orders.perform_cmd(async { Msg::OsmNotePosted(send_osm_note_request(note).await) });
+            }
+        }
+
+        Msg::OsmNotePosted(Ok(note_id)) => {
+            if let Some(note) = model.notes.iter_mut().find(|note| note.id == note_id) {
+                note.uploaded = true;
+
+                LocalStorage::insert(NOTE_STORAGE_KEY, &model.notes)
+                    .expect("Unable to save note to LocalStorage");
+            }
+        }
+
+        Msg::OsmNotePosted(Err(fetch_error)) => {
+            error!("Posting OSM note failed: {:#?}", fetch_error);
         }
 
         Msg::DeleteNote(id) => {
@@ -350,6 +381,15 @@ fn view_notes(model: &Model) -> Node<Msg> {
                                 ev(Ev::Click, move |_| Msg::Locate(position))
                             ],
                             button![
+                                C![if note.uploaded {
+                                    "btn icon-enabled"
+                                } else {
+                                    "btn"
+                                }],
+                                img![attrs! {At::Src => "icons/upload.svg"}, C!["icon"]],
+                                ev(Ev::Click, move |_| Msg::UploadNote(note_id))
+                            ],
+                            button![
                                 C!["btn"],
                                 img![attrs! {At::Src => "icons/pen.svg"}, C!["icon"]],
                                 ev(Ev::Click, move |_| Msg::EditNote(note_id))
@@ -451,7 +491,7 @@ fn view_way(model: &Model) -> Node<Msg> {
     }
 }
 
-async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
+async fn send_osm_map_request(bbox: &BoundingBox) -> fetch::Result<String> {
     let url = format!(
         "https://overpass-api.de/api/interpreter?data=[bbox];way[highway];(._;>;);out;&bbox={},{},{},{}",
         bbox.lower_left.lon, bbox.lower_left.lat, bbox.upper_right.lon, bbox.upper_right.lat
@@ -459,12 +499,35 @@ async fn send_osm_request(bbox: &BoundingBox) -> fetch::Result<String> {
 
     info!("Fetching query {}", url);
 
-    let response = Request::new(url).fetch().await.expect("OSM request failed");
+    let response = Request::new(url).fetch().await?;
     let status = response.status();
     let body = response.text().await.expect("Unable to get response text");
 
     if status.category == fetch::StatusCategory::Success {
         Ok(body)
+    } else {
+        Err(FetchError::StatusError(status))
+    }
+}
+
+async fn send_osm_note_request(note: Note) -> fetch::Result<NoteId> {
+    let url = format!(
+        "https://api.openstreetmap.org/api/0.6/notes?lat={}&lon={}&text={}",
+        note.position.lat,
+        note.position.lon,
+        encode(note.text.as_str())
+    );
+
+    info!("Posting note {}", url);
+
+    let status = Request::new(url)
+        .method(Method::Post)
+        .fetch()
+        .await?
+        .status();
+
+    if status.category == fetch::StatusCategory::Success {
+        Ok(note.id)
     } else {
         Err(FetchError::StatusError(status))
     }
@@ -527,7 +590,7 @@ fn is_wake_lock_supported() -> bool {
 }
 
 fn flip_track_position_icon() {
-    let css_class = "icon-control-container-enabled";
+    let css_class = "icon-enabled";
 
     let class_list = document()
         .get_element_by_id("track-position-control-container")
@@ -548,7 +611,7 @@ fn flip_track_position_icon() {
 }
 
 fn flip_wake_lock_icon() {
-    let css_class = "icon-control-container-enabled";
+    let css_class = "icon-enabled";
 
     let class_list = document()
         .get_element_by_id("wake-lock-control-container")

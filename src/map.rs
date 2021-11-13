@@ -244,7 +244,7 @@ where
             .expect("Unable to cast to HtmlAnchorElement");
 
         link.set_href("#");
-        link.set_inner_html("<div id='track-position-control-container' class='icon-control-container icon-control-container-enabled'><img src='icons/locate.svg' class='icon-control' /></div>");
+        link.set_inner_html("<div id='track-position-control-container' class='icon-control-container icon-enabled'><img src='icons/locate.svg' class='icon-control' /></div>");
         link.set_title("Track your position");
 
         let on_click = EventListener::new(&link, "click", move |_| {

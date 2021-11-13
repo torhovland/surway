@@ -51,12 +51,13 @@ impl fmt::Display for NoteId {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct Note {
     pub id: NoteId,
     pub time: f64,
-    pub text: String,
     pub position: Coord,
+    pub text: String,
+    pub uploaded: bool,
 }
 
 impl Model {
