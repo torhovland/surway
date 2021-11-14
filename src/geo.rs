@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 const R: f64 = 6371008.8; // mean Earth radius
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Coord {
     pub lat: f64,
     pub lon: f64,

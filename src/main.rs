@@ -89,6 +89,10 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         notes_layer_group: None,
         osm: OsmDocument::new(),
         position,
+        nearest_way_id: None,
+        start_distance: None,
+        end_distance: None,
+        way_distance: None,
         track_position: true,
         osm_chunk_position: None,
         osm_chunk_radius: 500.0,
@@ -143,12 +147,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
 
         Msg::Position(position) => {
-            if model.track_position {
-                pan_to_position(model, position);
-            }
-
-            model.position = position;
-            update_position(model, orders);
+            update_position(position, model, orders);
         }
 
         Msg::Locate(position) => {
@@ -164,18 +163,14 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             let mut rng = thread_rng();
             let bearing = rng.gen_range(0.0..360.0);
             let distance = rng.gen_range(0.0..100.0);
-            model.position = destination(&model.position, bearing, distance);
-
-            if model.track_position {
-                pan_to_position(model, model.position);
-            }
+            let position = destination(&model.position, bearing, distance);
 
             info!(
                 "Walking randomly for {} m at bearing {} yields new position {:?}.",
-                distance, bearing, model.position
+                distance, bearing, position
             );
 
-            update_position(model, orders);
+            update_position(position, model, orders);
         }
 
         Msg::SaveNote => {
@@ -449,8 +444,19 @@ fn route_title(route: Route) -> &'static str {
 }
 
 fn view_way(model: &Model) -> Node<Msg> {
-    match model.find_nearest_way() {
-        Some(way) => {
+    match (
+        model.nearest_way_id.clone(),
+        model.start_distance,
+        model.end_distance,
+        model.way_distance,
+    ) {
+        (Some(way_id), Some(start_distance), Some(end_distance), Some(way_distance)) => {
+            let way = model
+                .osm
+                .ways
+                .iter()
+                .find(|w| w.id == way_id)
+                .expect("No longer have the way with the expected id.");
             div![
                 C!["way-info"],
                 div![
@@ -460,34 +466,24 @@ fn view_way(model: &Model) -> Node<Msg> {
                         format!(" {} = {}", tag.k, tag.v),
                     ])
                 ],
-                div![match (way.start(&model.osm), way.end(&model.osm)) {
-                    (Some(start), Some(end)) => {
-                        div![
-                            C!["flex-list"],
-                            div![
-                                img![attrs! {At::Src => "icons/ruler-green.svg"}, C!["icon"]],
-                                format!(" start: {} m", start.distance(&model.position).round()),
-                            ],
-                            div![
-                                img![attrs! {At::Src => "icons/ruler-green.svg"}, C!["icon"]],
-                                format!(" end: {} m", end.distance(&model.position).round())
-                            ],
-                            div![
-                                img![attrs! {At::Src => "icons/ruler-green.svg"}, C!["icon"]],
-                                format!(
-                                    " away: {} m",
-                                    way.distance(&model.position, &model.osm).round()
-                                )
-                            ],
-                        ]
-                    }
-                    _ => {
-                        div![]
-                    }
-                }]
+                div![
+                    C!["flex-list"],
+                    div![
+                        img![attrs! {At::Src => "icons/ruler-green.svg"}, C!["icon"]],
+                        format!(" start: {} m", start_distance),
+                    ],
+                    div![
+                        img![attrs! {At::Src => "icons/ruler-green.svg"}, C!["icon"]],
+                        format!(" end: {} m", end_distance)
+                    ],
+                    div![
+                        img![attrs! {At::Src => "icons/ruler-green.svg"}, C!["icon"]],
+                        format!(" away: {} m", way_distance)
+                    ]
+                ]
             ]
         }
-        None => div![],
+        _ => div![],
     }
 }
 
@@ -533,11 +529,36 @@ async fn send_osm_note_request(note: Note) -> fetch::Result<NoteId> {
     }
 }
 
-fn update_position(model: &mut Model, orders: &mut impl Orders<Msg>) {
+fn update_position(position: Coord, model: &mut Model, orders: &mut impl Orders<Msg>) {
+    if position == model.position {
+        info!("Position unchanged.");
+        return;
+    }
+
+    model.position = position;
+    let nearest_way = model.find_nearest_way();
+    let nearest_way_id = nearest_way.map(|w| w.id.clone());
+
+    let start_position = nearest_way.map(|w| w.start(&model.osm)).flatten();
+    let end_position = nearest_way.map(|w| w.end(&model.osm)).flatten();
+
+    let start_distance = start_position.map(|p| p.distance(&model.position).round());
+    let end_distance = end_position.map(|p| p.distance(&model.position).round());
+    let way_distance = nearest_way.map(|w| w.distance(&model.position, &model.osm).round());
+
+    model.nearest_way_id = nearest_way_id;
+    model.start_distance = start_distance;
+    model.end_distance = end_distance;
+    model.way_distance = way_distance;
+
+    if model.track_position {
+        pan_to_position(model, position);
+    }
+
     map::render_position(model);
 
     if model.is_outside_osm_trigger_box() {
-        model.osm_chunk_position = Some(model.position);
+        model.osm_chunk_position = Some(position);
         orders.send_msg(Msg::DownloadOsmChunk);
     }
 
