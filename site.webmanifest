@@ -3,7 +3,7 @@
     "background_color": "#000000",
     "display": "standalone",
     "scope": "https://surway.hovland.xyz/",
-    "start_url": "https://surway.hovland.xyz",
+    "start_url": "https://surway.hovland.xyz/",
     "name": "Surway",
     "short_name": "Surway",
     "description": "For verifying and contributing to OpenStreetMap",
