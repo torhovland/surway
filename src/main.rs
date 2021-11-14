@@ -131,6 +131,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.osm = quick_xml::de::from_str(&response_data)
                 .expect("Unable to deserialize the OSM data");
 
+            // If we haven't calculated nearest way yet, do it now
+            update_position(model.position, model, orders);
+
             map::render_topology_and_position(model);
         }
 
@@ -530,7 +533,7 @@ async fn send_osm_note_request(note: Note) -> fetch::Result<NoteId> {
 }
 
 fn update_position(position: Coord, model: &mut Model, orders: &mut impl Orders<Msg>) {
-    if position == model.position {
+    if model.nearest_way_id.is_some() && position == model.position {
         info!("Position unchanged.");
         return;
     }
