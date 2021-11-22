@@ -4,7 +4,7 @@ use geo::{destination, BoundingBox, Coord};
 use js_sys::Date;
 use leaflet::{LayerGroup, Map};
 use log::{error, info, warn};
-use model::{Model, Note, NoteId, Route};
+use model::{Model, Note, NoteId, OAuth2Response, Route};
 use osm::OsmDocument;
 use rand::prelude::*;
 use seed::{prelude::*, *};
@@ -26,6 +26,7 @@ enum Msg {
     NoteChanged(String),
     OsmMapFetched(fetch::Result<String>),
     OsmNotePosted(fetch::Result<NoteId>),
+    OsmAuthenticated(fetch::Result<String>),
     Position(Coord),
     Locate(Coord),
     RandomWalk,
@@ -83,6 +84,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
 
     Model {
         route: Route::from(url),
+        user: None,
         map: None,
         topology_layer_group: None,
         position_layer_group: None,
@@ -107,7 +109,17 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::UrlChanged(subs::UrlChanged(url)) => {
+            info!("URL changed: {}", url);
             let route = Route::from(url);
+            info!("Route: {:?}", route);
+
+            if let Route::Callback(code) = route.clone() {
+                info!("Auth code: {}", code);
+                orders.perform_cmd(async move {
+                    Msg::OsmAuthenticated(send_osm_token_request(&code).await)
+                });
+            }
+
             model.route = route;
         }
 
@@ -147,6 +159,15 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 }
             }
             error!("Fetching OSM data failed: {:#?}", fetch_error);
+        }
+
+        Msg::OsmAuthenticated(Ok(response_data)) => {
+            info!("User {} successfully authenticated.", response_data);
+            model.user = Some(response_data);
+        }
+
+        Msg::OsmAuthenticated(Err(fetch_error)) => {
+            error!("OSM authentication failed: {:#?}", fetch_error);
         }
 
         Msg::Position(position) => {
@@ -319,6 +340,13 @@ fn view(model: &Model) -> Node<Msg> {
                         At::Href => "#notes"
                     },
                     "Notes"
+                ),
+                a!(
+                    C!["btn"],
+                    attrs! {
+                        At::Href => "https://www.openstreetmap.org/oauth2/authorize?response_type=code&client_id=H_ZgxAxDxk7mvYbsd_ub9igbYZEoFNkzEB49VogyQH8&scope=write_notes&redirect_uri=http://127.0.0.1:8088/callback&state=foo"
+                    },
+                    model.user.clone().unwrap_or_else(|| "OSM login".into())
                 )
             ],
             view_way(model),
@@ -335,7 +363,7 @@ fn view(model: &Model) -> Node<Msg> {
                 div![
                     C!["modal-header"],
                     a![C!["btn btn-clear float-right"], attrs! {At::Href => "#"}],
-                    div![C!["modal-title h5"], route_title(model.route)]
+                    div![C!["modal-title h5"], route_title(model.route.clone())]
                 ],
                 view_modal(model)
             ]
@@ -345,10 +373,10 @@ fn view(model: &Model) -> Node<Msg> {
 
 fn view_modal(model: &Model) -> Node<Msg> {
     match model.route {
-        Route::Main => div![],
         Route::Notes => view_notes(model),
         Route::EditNote => view_edit_note(model),
         Route::NewNote => view_edit_note(model),
+        _ => div![],
     }
 }
 
@@ -439,10 +467,10 @@ fn view_edit_note(model: &Model) -> Node<Msg> {
 
 fn route_title(route: Route) -> &'static str {
     match route {
-        Route::Main => "Main",
         Route::Notes => "Notes",
         Route::EditNote => "Edit note",
         Route::NewNote => "Take a note",
+        _ => "Surway",
     }
 }
 
@@ -527,6 +555,33 @@ async fn send_osm_note_request(note: Note) -> fetch::Result<NoteId> {
 
     if status.category == fetch::StatusCategory::Success {
         Ok(note.id)
+    } else {
+        Err(FetchError::StatusError(status))
+    }
+}
+
+async fn send_osm_token_request(code: &str) -> fetch::Result<String> {
+    let url = "https://www.openstreetmap.org/oauth2/token";
+
+    let response = Request::new(url)
+        .method(Method::Post)
+        .text(format!(
+            "grant_type=authorization_code&redirect_uri=http://127.0.0.1:8088/callback&code={}",
+            code
+        ))
+        .header(Header::content_type("application/x-www-form-urlencoded"))
+        .header(Header::authorization(
+            "Basic SF9aZ3hBeER4azdtdllic2RfdWI5aWdiWVpFb0ZOa3pFQjQ5Vm9neVFIODo=",
+        ))
+        .fetch()
+        .await?;
+
+    let status = response.status();
+    let body: OAuth2Response = response.json().await.expect("Unable to get response text");
+
+    if status.category == fetch::StatusCategory::Success {
+        info!("Response: {:?}", body);
+        Ok(body.access_token)
     } else {
         Err(FetchError::StatusError(status))
     }

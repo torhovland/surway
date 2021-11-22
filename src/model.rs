@@ -12,6 +12,7 @@ use crate::{
 
 pub struct Model {
     pub route: Route,
+    pub user: Option<String>,
     pub map: Option<Map>,
     pub topology_layer_group: Option<LayerGroup>,
     pub position_layer_group: Option<LayerGroup>,
@@ -32,9 +33,10 @@ pub struct Model {
     pub wake_lock_sentinel: Option<WakeLockSentinel>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Route {
     Main,
+    Callback(String),
     EditNote,
     NewNote,
     Notes,
@@ -62,6 +64,11 @@ pub struct Note {
     pub position: Coord,
     pub text: String,
     pub uploaded: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OAuth2Response {
+    pub access_token: String,
 }
 
 impl Model {
@@ -100,11 +107,21 @@ impl Model {
 
 impl From<Url> for Route {
     fn from(mut url: Url) -> Self {
-        match url.remaining_hash_path_parts().as_slice() {
-            ["edit-note"] => Self::EditNote,
-            ["new-note"] => Self::NewNote,
-            ["notes"] => Self::Notes,
-            _ => Self::Main,
+        match url.remaining_path_parts().as_slice() {
+            ["callback"] => Self::Callback(
+                url.search()
+                    .get("code")
+                    .expect("No auth codes provided.")
+                    .first()
+                    .expect("No auth code provided.")
+                    .clone(),
+            ),
+            _ => match url.remaining_hash_path_parts().as_slice() {
+                ["edit-note"] => Self::EditNote,
+                ["new-note"] => Self::NewNote,
+                ["notes"] => Self::Notes,
+                _ => Self::Main,
+            },
         }
     }
 }
