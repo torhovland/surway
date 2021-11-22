@@ -4,12 +4,14 @@ use geo::{destination, BoundingBox, Coord};
 use js_sys::Date;
 use leaflet::{LayerGroup, Map};
 use log::{error, info, warn};
-use model::{Model, Note, NoteId, OAuth2Response, Route};
+use model::{Model, Note, NoteId, OAuth2Response, Route, User};
 use osm::OsmDocument;
 use rand::prelude::*;
 use seed::{prelude::*, *};
 use urlencoding::encode;
 use web_sys::{Element, PositionOptions, WakeLock, WakeLockSentinel, WakeLockType};
+
+use crate::model::UserResponse;
 
 mod bindings;
 mod geo;
@@ -25,6 +27,7 @@ enum Msg {
     InvalidateMapSize,
     NoteChanged(String),
     OsmMapFetched(fetch::Result<String>),
+    OsmUserFetched(fetch::Result<User>),
     OsmNotePosted(fetch::Result<NoteId>),
     OsmAuthenticated(fetch::Result<String>),
     Position(Coord),
@@ -84,6 +87,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
 
     Model {
         route: Route::from(url),
+        access_token: None,
         user: None,
         map: None,
         topology_layer_group: None,
@@ -118,9 +122,11 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 orders.perform_cmd(async move {
                     Msg::OsmAuthenticated(send_osm_token_request(&code).await)
                 });
-            }
 
-            model.route = route;
+                model.route = Route::Main;
+            } else {
+                model.route = route;
+            }
         }
 
         Msg::DownloadOsmChunk => {
@@ -161,13 +167,26 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             error!("Fetching OSM data failed: {:#?}", fetch_error);
         }
 
-        Msg::OsmAuthenticated(Ok(response_data)) => {
-            info!("User {} successfully authenticated.", response_data);
-            model.user = Some(response_data);
+        Msg::OsmAuthenticated(Ok(access_token)) => {
+            info!("User {} successfully authenticated.", access_token);
+            let request_token = access_token.clone();
+            model.access_token = Some(access_token);
+
+            orders.perform_cmd(async move {
+                Msg::OsmUserFetched(send_osm_user_request(&request_token).await)
+            });
         }
 
         Msg::OsmAuthenticated(Err(fetch_error)) => {
             error!("OSM authentication failed: {:#?}", fetch_error);
+        }
+
+        Msg::OsmUserFetched(Ok(user)) => {
+            model.user = Some(user);
+        }
+
+        Msg::OsmUserFetched(Err(fetch_error)) => {
+            error!("Fetching OSM user failed: {:#?}", fetch_error);
         }
 
         Msg::Position(position) => {
@@ -344,9 +363,13 @@ fn view(model: &Model) -> Node<Msg> {
                 a!(
                     C!["btn"],
                     attrs! {
-                        At::Href => "https://www.openstreetmap.org/oauth2/authorize?response_type=code&client_id=H_ZgxAxDxk7mvYbsd_ub9igbYZEoFNkzEB49VogyQH8&scope=write_notes&redirect_uri=http://127.0.0.1:8088/callback&state=foo"
+                        At::Href => "https://www.openstreetmap.org/oauth2/authorize?response_type=code&client_id=H_ZgxAxDxk7mvYbsd_ub9igbYZEoFNkzEB49VogyQH8&scope=read_prefs+write_notes&redirect_uri=http://127.0.0.1:8088/callback&state=foo"
                     },
-                    model.user.clone().unwrap_or_else(|| "OSM login".into())
+                    model
+                        .user
+                        .as_ref()
+                        .map(|u| u.name.clone())
+                        .unwrap_or_else(|| "OSM login".into())
                 )
             ],
             view_way(model),
@@ -582,6 +605,29 @@ async fn send_osm_token_request(code: &str) -> fetch::Result<String> {
     if status.category == fetch::StatusCategory::Success {
         info!("Response: {:?}", body);
         Ok(body.access_token)
+    } else {
+        Err(FetchError::StatusError(status))
+    }
+}
+
+async fn send_osm_user_request(access_token: &str) -> fetch::Result<User> {
+    let url = "https://www.openstreetmap.org/api/0.6/user/details.json";
+
+    let response = Request::new(url)
+        .header(Header::authorization(format!("Bearer {}", access_token)))
+        .fetch()
+        .await?;
+
+    let status = response.status();
+    let response: UserResponse = response.json().await.expect("Unable to get user JSON");
+
+    if status.category == fetch::StatusCategory::Success {
+        info!("Response: {:?}", response);
+        let user = User {
+            name: response.user.display_name,
+            photo: "".into(),
+        };
+        Ok(user)
     } else {
         Err(FetchError::StatusError(status))
     }

@@ -12,7 +12,8 @@ use crate::{
 
 pub struct Model {
     pub route: Route,
-    pub user: Option<String>,
+    pub access_token: Option<String>,
+    pub user: Option<User>,
     pub map: Option<Map>,
     pub topology_layer_group: Option<LayerGroup>,
     pub position_layer_group: Option<LayerGroup>,
@@ -69,6 +70,28 @@ pub struct Note {
 #[derive(Debug, Deserialize)]
 pub struct OAuth2Response {
     pub access_token: String,
+}
+
+#[derive(Debug)]
+pub struct User {
+    pub name: String,
+    pub photo: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UserResponse {
+    pub user: UserResponseUser,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UserResponseUser {
+    pub display_name: String,
+    pub img: UserResponseImg,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UserResponseImg {
+    pub href: String,
 }
 
 impl Model {
