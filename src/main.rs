@@ -363,7 +363,8 @@ fn view(model: &Model) -> Node<Msg> {
                 a!(
                     C!["btn"],
                     attrs! {
-                        At::Href => "https://www.openstreetmap.org/oauth2/authorize?response_type=code&client_id=H_ZgxAxDxk7mvYbsd_ub9igbYZEoFNkzEB49VogyQH8&scope=read_prefs+write_notes&redirect_uri=http://127.0.0.1:8088/callback&state=foo"
+                        At::Href => format!("https://www.openstreetmap.org/oauth2/authorize?response_type=code&client_id={}&scope=read_prefs+write_notes&redirect_uri={}&state=foo",
+                        oauth2_client(), oauth2_callback())
                     },
                     model
                         .user
@@ -593,9 +594,7 @@ async fn send_osm_token_request(code: &str) -> fetch::Result<String> {
             code
         ))
         .header(Header::content_type("application/x-www-form-urlencoded"))
-        .header(Header::authorization(
-            "Basic SF9aZ3hBeER4azdtdllic2RfdWI5aWdiWVpFb0ZOa3pFQjQ5Vm9neVFIODo=",
-        ))
+        .header(Header::authorization(format!("Basic {}", oauth2_auth())))
         .fetch()
         .await?;
 
@@ -762,7 +761,13 @@ cfg_if! {
             use log::Level;
             console_log::init_with_level(Level::Trace).expect("error initializing log");
         }
+        fn oauth2_callback() -> String { "http://127.0.0.1:8088/callback".into() }
+        fn oauth2_client() -> String { "H_ZgxAxDxk7mvYbsd_ub9igbYZEoFNkzEB49VogyQH8".into() }
+        fn oauth2_auth() -> String { "SF9aZ3hBeER4azdtdllic2RfdWI5aWdiWVpFb0ZOa3pFQjQ5Vm9neVFIODo=".into() }
     } else {
         fn init_log() {}
+        fn oauth2_callback() -> String { "https://surway.hovland.xyz/callback".into() }
+        fn oauth2_client() -> String { "WMCljcpGb8Gr36esjgbzodI9nZ6x49bAfqF5rWDgsBk".into() }
+        fn oauth2_auth() -> String { "V01DbGpjcEdiOEdyMzZlc2pnYnpvZEk5blo2eDQ5YkFmcUY1cldEZ3NCazo=".into() }
     }
 }
