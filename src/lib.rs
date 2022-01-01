@@ -44,7 +44,8 @@ enum Msg {
     KeepWakeLockSentinel(WakeLockSentinel),
 }
 
-fn main() {
+#[wasm_bindgen(start)]
+pub fn start() {
     init_log();
     App::start("app", init, update, view);
 }

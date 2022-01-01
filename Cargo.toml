@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Tor Hovland <tor.hovland@bekk.no>"]
 edition = "2018"
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 cfg-if = "1.0.0"
 console_log = { version = "0.2.0", features = ["color"] }
