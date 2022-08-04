@@ -16,7 +16,7 @@ log = "0.4.14"
 quick-xml = { version = "0.22.0", features = ["serialize"] }
 rand = "0.8.4"
 seed = "0.8.0"
-serde = "1.0.132"
+serde = "1.0.142"
 urlencoding = "2.1.0"
 web-sys = { version = "0.3.55", features = ["DomTokenList", "Element", "Geolocation", "HtmlAnchorElement", "Navigator", "PositionOptions", "WakeLock", "WakeLockType", "WakeLockSentinel"] }
 
