@@ -1,58 +1,30 @@
 on: push
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    outputs:
-      status: ${{ steps.early.conclusion }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Test
-        uses: docker://torhovland/rust-trunk:0.14.0
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          entrypoint: cargo
-          args: test --target x86_64-unknown-linux-gnu
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Build
-        uses: docker://torhovland/rust-trunk:0.14.0
-        with:
-          entrypoint: /bin/bash
-          args: -c "rustup target add wasm32-unknown-unknown && trunk --config Trunk-release.toml build"
-
-      - name: Set branch name
-        if: github.event_name == 'pull_request'
-        run: echo "branch_name=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
+        run: npm run build
+        env:
+          VITE_OSM_CLIENT_ID: ${{ secrets.VITE_OSM_CLIENT_ID }}
+          VITE_OSM_CLIENT_SECRET: ${{ secrets.VITE_OSM_CLIENT_SECRET }}
+          VITE_OSM_REDIRECT_URI: https://surway.hovland.co/callback
 
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          personal_token: ${{ secrets.Deploy_PAT }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          cname: surway.hovland.xyz
+          cname: surway.hovland.co
           publish_dir: ./dist
-          destination_dir: ${{ env.branch_name }}
-
-      - name: Cypress run
-        uses: cypress-io/github-action@v2
-        timeout-minutes: 5
-        env:
-          CYPRESS_BASE_URL: https://surway.hovland.xyz/${{ env.branch_name }}
-        with:
-          working-directory: cypress
-          spec: cypress/**/*.spec.js
-
-      - name: Save test screenshots
-        uses: actions/upload-artifact@v1
-        if: failure()
-        with:
-          name: cypress-screenshots
-          path: cypress/cypress/screenshots
-
-      - name: Save test videos
-        uses: actions/upload-artifact@v1
-        if: always()
-        with:
-          name: cypress-videos
-          path: cypress/cypress/videos

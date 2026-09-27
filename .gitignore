@@ -1,5 +1,3 @@
-videos
-dist
 node_modules
-target
-**/*.rs.bk
+dist
+.env
