@@ -1,0 +1,32 @@
+on: push
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: surway-react
+        run: npm ci
+
+      - name: Build
+        working-directory: surway-react
+        run: npm run build
+        env:
+          VITE_OSM_CLIENT_ID: ${{ secrets.VITE_OSM_CLIENT_ID }}
+          VITE_OSM_CLIENT_SECRET: ${{ secrets.VITE_OSM_CLIENT_SECRET }}
+          VITE_OSM_REDIRECT_URI: https://surway.hovland.co/callback
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          cname: surway.hovland.co
+          publish_dir: surway-react/dist
